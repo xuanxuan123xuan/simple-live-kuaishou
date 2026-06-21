@@ -1,0 +1,430 @@
+import 'dart:convert';
+import 'dart:math' as math;
+import 'package:dio/dio.dart';
+import 'package:cookie_jar/cookie_jar.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:simple_live_core/src/common/http_client.dart';
+import 'package:simple_live_core/src/danmaku/kuaishou_danmaku.dart';
+import 'package:simple_live_core/src/interface/live_danmaku.dart';
+import 'package:simple_live_core/src/interface/live_site.dart';
+import 'package:simple_live_core/src/model/live_category.dart';
+import 'package:simple_live_core/src/model/live_category_result.dart';
+import 'package:simple_live_core/src/model/live_play_quality.dart';
+import 'package:simple_live_core/src/model/live_play_url.dart';
+import 'package:simple_live_core/src/model/live_room_detail.dart';
+import 'package:simple_live_core/src/model/live_room_item.dart';
+
+class KuaishouSite extends LiveSite {
+  KuaishouSite() {
+    id = "kuaishou";
+    name = "快手直播";
+  }
+
+  /// 可选的自定义 Cookie
+  String customCookie = '';
+
+  String cookie = '';
+  Map<String, String> cookieObj = {};
+
+  static const List<String> _imageExtensions = [
+    'svgz', 'pjp', 'png', 'ico', 'avif', 'tiff', 'tif', 'jfif',
+    'svg', 'xbm', 'pjpeg', 'webp', 'jpg', 'jpeg', 'bmp', 'gif',
+  ];
+
+  Map<String, dynamic> get _headers => {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'accept':
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'connection': 'keep-alive',
+        'sec-ch-ua':
+            'Google Chrome;v=120, Chromium;v=120, Not=A?Brand;v=24',
+        'sec-ch-ua-platform': 'Windows',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+      };
+
+  @override
+  LiveDanmaku getDanmaku() => KuaishouDanmaku();
+
+  // ==================== 分类 ====================
+
+  @override
+  Future<List<LiveCategory>> getCategores() async {
+    List<LiveCategory> categories = [
+      LiveCategory(id: "1", name: "热门", children: []),
+      LiveCategory(id: "2", name: "网游", children: []),
+      LiveCategory(id: "3", name: "单机", children: []),
+      LiveCategory(id: "4", name: "手游", children: []),
+      LiveCategory(id: "5", name: "棋牌", children: []),
+      LiveCategory(id: "6", name: "娱乐", children: []),
+      LiveCategory(id: "7", name: "综合", children: []),
+      LiveCategory(id: "8", name: "文化", children: []),
+    ];
+
+    for (var category in categories) {
+      var subs = await _getAllSubCategories(category);
+      category.children.addAll(subs);
+    }
+    return categories;
+  }
+
+  Future<List<LiveSubCategory>> _getAllSubCategories(
+    LiveCategory category, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    List<LiveSubCategory> allSubs = [];
+    try {
+      while (true) {
+        var subs = await _getSubCategories(category, page, pageSize);
+        allSubs.addAll(subs);
+        if (subs.length < pageSize) break;
+        page++;
+      }
+    } catch (_) {}
+    return allSubs;
+  }
+
+  Future<List<LiveSubCategory>> _getSubCategories(
+    LiveCategory category,
+    int page,
+    int pageSize,
+  ) async {
+    var result = await HttpClient.instance.getJson(
+      "https://live.kuaishou.com/live_api/category/data",
+      queryParameters: {
+        "type": category.id,
+        "page": page,
+        "size": pageSize,
+      },
+      header: _headers,
+    );
+
+    List<LiveSubCategory> subs = [];
+    for (var item in result["data"]["list"] ?? []) {
+      subs.add(LiveSubCategory(
+        id: item["id"].toString(),
+        name: item["name"] ?? "",
+        parentId: category.id,
+        pic: item["poster"],
+      ));
+    }
+    return subs;
+  }
+
+  // ==================== 分类直播间列表 ====================
+
+  @override
+  Future<LiveCategoryResult> getCategoryRooms(
+    LiveSubCategory category, {
+    int page = 1,
+  }) async {
+    var api = category.id.length < 7
+        ? "https://live.kuaishou.com/live_api/gameboard/list"
+        : "https://live.kuaishou.com/live_api/non-gameboard/list";
+
+    var result = await HttpClient.instance.getJson(
+      api,
+      queryParameters: {
+        "filterType": 0,
+        "pageSize": 20,
+        "gameId": category.id,
+        "page": page,
+      },
+      header: _headers,
+    );
+
+    var items = <LiveRoomItem>[];
+    for (var item in result["data"]["list"] ?? []) {
+      var cover = item['poster']?.toString() ?? '';
+      if (cover.isNotEmpty && !_isImage(cover)) {
+        cover = '$cover.jpg';
+      }
+      items.add(LiveRoomItem(
+        roomId: item["author"]["id"]?.toString() ?? '',
+        title: item['caption']?.toString() ?? '',
+        cover: cover,
+        userName: item["author"]["name"]?.toString() ?? '',
+        online: _parseInt(item["watchingCount"]),
+      ));
+    }
+
+    return LiveCategoryResult(
+      hasMore: items.length >= 20,
+      items: items,
+    );
+  }
+
+  // ==================== 推荐直播间 ====================
+
+  @override
+  Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
+    var result = await HttpClient.instance.getJson(
+      "https://live.kuaishou.com/live_api/home/list",
+      header: _headers,
+    );
+
+    var list = result['data']['list'] ?? [];
+    var items = <LiveRoomItem>[];
+
+    for (var item in list) {
+      for (var sitem in item["gameLiveInfo"] ?? []) {
+        for (var titem in sitem["liveInfo"] ?? []) {
+          var author = titem["author"];
+          var gameInfo = titem["gameInfo"];
+          var cover = gameInfo['poster']?.toString() ?? '';
+          items.add(LiveRoomItem(
+            roomId: author["id"]?.toString() ?? '',
+            title: author["name"]?.toString() ?? '',
+            cover: cover,
+            userName: author["name"]?.toString() ?? '',
+            online: _parseInt(titem["watchingCount"]),
+          ));
+        }
+      }
+    }
+
+    return LiveCategoryResult(hasMore: false, items: items);
+  }
+
+  // ==================== 房间详情 ====================
+
+  @override
+  Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
+    var url = "https://live.kuaishou.com/u/$roomId";
+    var mHeaders = _headers;
+
+    if (customCookie.isNotEmpty) {
+      mHeaders['cookie'] = customCookie;
+    }
+
+    // 获取 Cookie
+    await _getCookie(url);
+    // 注册 DID
+    await _registerDid();
+
+    var resultText = await HttpClient.instance.getText(
+      url,
+      queryParameters: {},
+      header: mHeaders,
+    );
+
+    try {
+      var text = RegExp(r"window\.__INITIAL_STATE__=(.*?);", multiLine: false)
+          .firstMatch(resultText)
+          ?.group(1);
+
+      if (text == null) {
+        return _offlineDetail(roomId);
+      }
+
+      var transferData = text.replaceAll("undefined", "null");
+      var jsonObj = jsonDecode(transferData);
+
+      var playList = jsonObj["liveroom"]["playList"];
+      if (playList == null || playList.isEmpty) {
+        return _offlineDetail(roomId);
+      }
+
+      var first = playList[0];
+      var liveStream = first["liveStream"];
+      var author = first["author"];
+      var gameInfo = first["gameInfo"];
+      var isLiving = first["isLiving"] ?? false;
+
+      var cover = liveStream['poster']?.toString() ?? '';
+      if (cover.isNotEmpty && !_isImage(cover)) {
+        cover = '$cover.jpg';
+      }
+
+      return LiveRoomDetail(
+        roomId: author["id"]?.toString() ?? roomId,
+        title: author["name"]?.toString() ?? '',
+        cover: cover,
+        userName: author["name"]?.toString() ?? '',
+        userAvatar: author["avatar"]?.toString() ?? '',
+        online: isLiving ? _parseInt(gameInfo["watchingCount"]) : 0,
+        introduction: author["description"]?.toString(),
+        notice: author["description"]?.toString(),
+        status: isLiving,
+        url: liveStream["id"]?.toString() ?? '',
+        data: liveStream["playUrls"],
+        categoryId: gameInfo["id"]?.toString(),
+        categoryName: gameInfo["name"]?.toString(),
+      );
+    } catch (_) {
+      return _offlineDetail(roomId);
+    }
+  }
+
+  LiveRoomDetail _offlineDetail(String roomId) {
+    return LiveRoomDetail(
+      roomId: roomId,
+      title: '',
+      cover: '',
+      userName: '',
+      userAvatar: '',
+      online: 0,
+      status: false,
+      url: '',
+    );
+  }
+
+  // ==================== 清晰度 ====================
+
+  @override
+  Future<List<LivePlayQuality>> getPlayQualites({
+    required LiveRoomDetail detail,
+  }) async {
+    List<LivePlayQuality> qualities = [];
+
+    try {
+      var qualityList =
+          detail.data["h264"]["adaptationSet"]["representation"];
+
+      for (var quality in qualityList ?? []) {
+        qualities.add(LivePlayQuality(
+          quality: quality["name"]?.toString() ?? '',
+          sort: quality["level"] ?? 0,
+          data: <String>[quality["url"]?.toString() ?? ''],
+        ));
+      }
+    } catch (_) {}
+
+    qualities.sort((a, b) => b.sort.compareTo(a.sort));
+    return qualities;
+  }
+
+  @override
+  Future<LivePlayUrl> getPlayUrls({
+    required LiveRoomDetail detail,
+    required LivePlayQuality quality,
+  }) async {
+    List<String> urls = [];
+    if (quality.data is List) {
+      for (var item in quality.data) {
+        urls.add(item.toString());
+      }
+    }
+    return LivePlayUrl(urls: urls);
+  }
+
+  // ==================== Cookie 管理 ====================
+
+  Future<void> _getCookie(String url) async {
+    final dio = Dio();
+    final cookieJar = CookieJar();
+    dio.interceptors.add(CookieManager(cookieJar));
+    await dio.get(url);
+    List<Cookie> cookies = await cookieJar.loadForRequest(Uri.parse(url));
+    cookie = '';
+    cookieObj = <String, String>{};
+    for (var i = 0; i < cookies.length; i++) {
+      if (i != cookies.length - 1) {
+        cookie += "${cookies[i].name}=${cookies[i].value};";
+      } else {
+        cookie += "${cookies[i].name}=${cookies[i].value}";
+      }
+      cookieObj[cookies[i].name] = cookies[i].value;
+    }
+  }
+
+  // ==================== DID 注册 ====================
+
+  Future<void> _registerDid() async {
+    var did = cookieObj['did'];
+    if (did == null || did.isEmpty) return;
+    try {
+      await HttpClient.instance.postJson(
+        'https://log-sdk.ksapisrv.com/rest/wd/common/log/collect/misc2?v=3.9.49&kpn=KS_GAME_LIVE_PC',
+        header: _headers,
+        data: _buildMisc2Data(did),
+      );
+    } catch (_) {}
+  }
+
+  Map<String, dynamic> _buildMisc2Data(String did) {
+    return {
+      'common': {
+        'identity_package': {'device_id': did, 'global_id': ''},
+        'app_package': {
+          'language': 'zh-CN',
+          'platform': 10,
+          'container': 'WEB',
+          'product_name': 'KS_GAME_LIVE_PC',
+        },
+        'device_package': {
+          'os_version': 'NT 10.0',
+          'model': 'Windows',
+          'ua':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        'need_encrypt': 'false',
+        'network_package': {'type': 3},
+        'h5_extra_attr':
+            '{"sdk_name":"webLogger","sdk_version":"3.9.49","sdk_bundle":"log.common.js","app_version_name":"","host_product":"","resolution":"1920x1080","screen_with":1920,"screen_height":1080,"device_pixel_ratio":1,"domain":"https://live.kuaishou.com"}',
+        'global_attr': '{}',
+      },
+      'logs': [
+        {
+          'client_timestamp': DateTime.now().millisecondsSinceEpoch,
+          'client_increment_id': math.Random().nextInt(8999) + 1000,
+          'session_id': _generateSessionId(),
+          'time_zone': 'GMT+08:00',
+          'event_package': {
+            'task_event': {
+              'type': 1,
+              'status': 0,
+              'operation_type': 1,
+              'operation_direction': 0,
+              'session_id': _generateSessionId(),
+              'url_package': {
+                'page': 'GAME_DETAL_PAGE',
+                'identity': _generateUuid(),
+                'page_type': 2,
+                'params': '{"game_id":1001,"game_name":"王者荣耀"}',
+              },
+              'element_package': {},
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  String _generateSessionId() {
+    return '${_hex(8)}-${_hex(4)}-${_hex(4)}-${_hex(4)}-${_hex(12)}';
+  }
+
+  String _generateUuid() {
+    return '${_hex(8)}-${_hex(4)}-${_hex(4)}-${_hex(4)}-${_hex(12)}';
+  }
+
+  String _hex(int length) {
+    const chars = '0123456789abcdef';
+    var result = '';
+    for (var i = 0; i < length; i++) {
+      result += chars[math.Random().nextInt(16)];
+    }
+    return result;
+  }
+
+  // ==================== 工具方法 ====================
+
+  bool _isImage(String url) {
+    if (url.isEmpty) return false;
+    var ext = url.split('.').last.toLowerCase();
+    return _imageExtensions.contains(ext);
+  }
+
+  int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is double) return value.toInt();
+    return 0;
+  }
+}
