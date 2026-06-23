@@ -487,6 +487,14 @@ class KuaishouSite extends LiveSite {
       var author = first["author"];
       var gameInfo = first["gameInfo"];
       var isLiving = first["isLiving"] ?? false;
+      var liveStreamId = liveStream["id"]?.toString() ?? '';
+      var websocketUrls = <String>[];
+      for (var item in jsonObj["liveroom"]["websocketUrls"] ?? []) {
+        var url = item?.toString() ?? '';
+        if (url.isNotEmpty) {
+          websocketUrls.add(url);
+        }
+      }
 
       var cover = liveStream['poster']?.toString() ?? '';
       if (cover.isNotEmpty && !_isImage(cover)) {
@@ -503,8 +511,18 @@ class KuaishouSite extends LiveSite {
         introduction: author["description"]?.toString(),
         notice: author["description"]?.toString(),
         status: isLiving,
-        url: liveStream["id"]?.toString() ?? '',
+        url: liveStreamId,
         data: liveStream["playUrls"],
+        danmakuData: KuaishouDanmakuArgs(
+          roomId: author["id"]?.toString() ?? roomId,
+          liveStreamId: liveStreamId,
+          token: jsonObj["liveroom"]["token"]?.toString() ?? '',
+          websocketUrls: websocketUrls,
+          pageId: _generatePageId(),
+          expTag: liveStream["expTag"]?.toString() ?? '',
+          attach: first["expTag"]?.toString() ?? '',
+          cookie: cookie,
+        ),
         categoryId: gameInfo["id"]?.toString(),
         categoryName: gameInfo["name"]?.toString(),
       );
@@ -665,6 +683,13 @@ class KuaishouSite extends LiveSite {
 
   String _generateUuid() {
     return '${_hex(8)}-${_hex(4)}-${_hex(4)}-${_hex(4)}-${_hex(12)}';
+  }
+
+  String _generatePageId() {
+    const chars =
+        'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
+    final random = math.Random();
+    return List.generate(16, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
   String _hex(int length) {
