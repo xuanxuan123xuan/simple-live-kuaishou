@@ -125,7 +125,7 @@ class ParseController extends GetxController {
     if (url.contains("douyu.com")) {
       var regExp = RegExp(r"douyu\.com/([\d|\w]+)");
       // 适配 topic_url
-      if(url.contains("topic")){
+      if (url.contains("topic")) {
         regExp = RegExp(r"[?&]rid=([\d]+)");
       }
       id = regExp.firstMatch(url)?.group(1) ?? "";
@@ -154,6 +154,12 @@ class ParseController extends GetxController {
       var u = regExp.firstMatch(url)?.group(0) ?? "";
       var location = await getLocation(u);
       return await parse(location);
+    }
+    if (url.contains("live.kuaishou.com")) {
+      var regExp = RegExp(r"live\.kuaishou\.com/u/([\d\w_-]+)");
+      id = regExp.firstMatch(url)?.group(1) ?? "";
+
+      return [id, Sites.allSites[Constant.kKuaishou]!];
     }
 
     return [];

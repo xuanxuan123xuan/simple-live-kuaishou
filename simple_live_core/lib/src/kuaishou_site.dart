@@ -7,12 +7,14 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/kuaishou_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
+import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_category_result.dart';
 import 'package:simple_live_core/src/model/live_play_quality.dart';
 import 'package:simple_live_core/src/model/live_play_url.dart';
 import 'package:simple_live_core/src/model/live_room_detail.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
+import 'package:simple_live_core/src/model/live_search_result.dart';
 
 class KuaishouSite extends LiveSite {
   KuaishouSite() {
@@ -27,24 +29,46 @@ class KuaishouSite extends LiveSite {
   Map<String, String> cookieObj = {};
 
   static const List<String> _imageExtensions = [
-    'svgz', 'pjp', 'png', 'ico', 'avif', 'tiff', 'tif', 'jfif',
-    'svg', 'xbm', 'pjpeg', 'webp', 'jpg', 'jpeg', 'bmp', 'gif',
+    'svgz',
+    'pjp',
+    'png',
+    'ico',
+    'avif',
+    'tiff',
+    'tif',
+    'jfif',
+    'svg',
+    'xbm',
+    'pjpeg',
+    'webp',
+    'jpg',
+    'jpeg',
+    'bmp',
+    'gif',
   ];
 
   Map<String, dynamic> get _headers => {
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'accept':
-            'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        'connection': 'keep-alive',
-        'sec-ch-ua':
-            'Google Chrome;v=120, Chromium;v=120, Not=A?Brand;v=24',
-        'sec-ch-ua-platform': 'Windows',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-User': '?1',
-      };
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'accept':
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+    'connection': 'keep-alive',
+    'sec-ch-ua': 'Google Chrome;v=120, Chromium;v=120, Not=A?Brand;v=24',
+    'sec-ch-ua-platform': 'Windows',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-User': '?1',
+  };
+
+  Map<String, dynamic> _searchHeaders(String keyword) => {
+    ..._headers,
+    'accept': 'application/json, text/plain, */*',
+    'referer':
+        'https://live.kuaishou.com/search?keyword=${Uri.encodeComponent(keyword)}',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+  };
 
   @override
   LiveDanmaku getDanmaku() => KuaishouDanmaku();
@@ -95,22 +119,20 @@ class KuaishouSite extends LiveSite {
   ) async {
     var result = await HttpClient.instance.getJson(
       "https://live.kuaishou.com/live_api/category/data",
-      queryParameters: {
-        "type": category.id,
-        "page": page,
-        "size": pageSize,
-      },
+      queryParameters: {"type": category.id, "page": page, "size": pageSize},
       header: _headers,
     );
 
     List<LiveSubCategory> subs = [];
     for (var item in result["data"]["list"] ?? []) {
-      subs.add(LiveSubCategory(
-        id: item["id"].toString(),
-        name: item["name"] ?? "",
-        parentId: category.id,
-        pic: item["poster"],
-      ));
+      subs.add(
+        LiveSubCategory(
+          id: item["id"].toString(),
+          name: item["name"] ?? "",
+          parentId: category.id,
+          pic: item["poster"],
+        ),
+      );
     }
     return subs;
   }
@@ -143,19 +165,18 @@ class KuaishouSite extends LiveSite {
       if (cover.isNotEmpty && !_isImage(cover)) {
         cover = '$cover.jpg';
       }
-      items.add(LiveRoomItem(
-        roomId: item["author"]["id"]?.toString() ?? '',
-        title: item['caption']?.toString() ?? '',
-        cover: cover,
-        userName: item["author"]["name"]?.toString() ?? '',
-        online: _parseInt(item["watchingCount"]),
-      ));
+      items.add(
+        LiveRoomItem(
+          roomId: item["author"]["id"]?.toString() ?? '',
+          title: item['caption']?.toString() ?? '',
+          cover: cover,
+          userName: item["author"]["name"]?.toString() ?? '',
+          online: _parseInt(item["watchingCount"]),
+        ),
+      );
     }
 
-    return LiveCategoryResult(
-      hasMore: items.length >= 20,
-      items: items,
-    );
+    return LiveCategoryResult(hasMore: items.length >= 20, items: items);
   }
 
   // ==================== 推荐直播间 ====================
@@ -176,18 +197,249 @@ class KuaishouSite extends LiveSite {
           var author = titem["author"];
           var gameInfo = titem["gameInfo"];
           var cover = gameInfo['poster']?.toString() ?? '';
-          items.add(LiveRoomItem(
-            roomId: author["id"]?.toString() ?? '',
-            title: author["name"]?.toString() ?? '',
-            cover: cover,
-            userName: author["name"]?.toString() ?? '',
-            online: _parseInt(titem["watchingCount"]),
-          ));
+          items.add(
+            LiveRoomItem(
+              roomId: author["id"]?.toString() ?? '',
+              title: author["name"]?.toString() ?? '',
+              cover: cover,
+              userName: author["name"]?.toString() ?? '',
+              online: _parseInt(titem["watchingCount"]),
+            ),
+          );
         }
       }
     }
 
     return LiveCategoryResult(hasMore: false, items: items);
+  }
+
+  // ==================== 搜索 ====================
+
+  @override
+  Future<LiveSearchRoomResult> searchRooms(
+    String keyword, {
+    int page = 1,
+  }) async {
+    try {
+      var result = await _searchLiveStreams(keyword, page: page);
+      if (result.items.isNotEmpty || page > 1) {
+        return result;
+      }
+    } catch (_) {}
+
+    if (page > 1) {
+      return LiveSearchRoomResult(hasMore: false, items: <LiveRoomItem>[]);
+    }
+
+    try {
+      return await _searchRoomsByOverview(keyword);
+    } catch (_) {
+      return LiveSearchRoomResult(hasMore: false, items: <LiveRoomItem>[]);
+    }
+  }
+
+  Future<LiveSearchRoomResult> _searchLiveStreams(
+    String keyword, {
+    int page = 1,
+  }) async {
+    var result = await HttpClient.instance.getJson(
+      "https://live.kuaishou.com/live_api/search/liveStream",
+      queryParameters: {"keyword": keyword, "page": page, "ussid": ""},
+      header: _searchHeaders(keyword),
+    );
+
+    var data = result["data"];
+    if (data is! Map || data["result"] != 1) {
+      return LiveSearchRoomResult(hasMore: false, items: <LiveRoomItem>[]);
+    }
+
+    var list = (data["list"] as List?) ?? [];
+    var items = <LiveRoomItem>[];
+    for (var item in list) {
+      var room = _parseSearchLiveRoom(item);
+      if (room.roomId.isNotEmpty) {
+        items.add(room);
+      }
+    }
+
+    return LiveSearchRoomResult(hasMore: list.isNotEmpty, items: items);
+  }
+
+  Future<LiveSearchRoomResult> _searchRoomsByOverview(String keyword) async {
+    var overview = await _getSearchOverview(keyword);
+    var liveStreams = _findOverviewSectionList(overview, "liveStreams");
+    var items = <LiveRoomItem>[];
+    for (var item in liveStreams) {
+      var room = _parseSearchLiveRoom(item);
+      if (room.roomId.isNotEmpty) {
+        items.add(room);
+      }
+    }
+    if (items.isNotEmpty) {
+      return LiveSearchRoomResult(hasMore: false, items: items);
+    }
+
+    var categories = _findOverviewSectionList(overview, "categories");
+    if (categories.isEmpty) {
+      return LiveSearchRoomResult(hasMore: false, items: <LiveRoomItem>[]);
+    }
+
+    var firstCategory = categories.first;
+    var categoryId = firstCategory["categoryId"]?.toString() ?? '';
+    if (categoryId.isEmpty) {
+      return LiveSearchRoomResult(hasMore: false, items: <LiveRoomItem>[]);
+    }
+
+    var result = await getCategoryRooms(
+      LiveSubCategory(
+        id: categoryId,
+        name: firstCategory["title"]?.toString() ?? keyword,
+        parentId: firstCategory["category"]?.toString() ?? '',
+        pic: firstCategory["src"]?.toString(),
+      ),
+    );
+    return LiveSearchRoomResult(hasMore: result.hasMore, items: result.items);
+  }
+
+  @override
+  Future<LiveSearchAnchorResult> searchAnchors(
+    String keyword, {
+    int page = 1,
+  }) async {
+    try {
+      var result = await _searchAnchors(keyword, page: page);
+      if (result.items.isNotEmpty || page > 1) {
+        return result;
+      }
+    } catch (_) {}
+
+    if (page > 1) {
+      return LiveSearchAnchorResult(hasMore: false, items: <LiveAnchorItem>[]);
+    }
+
+    try {
+      var overview = await _getSearchOverview(keyword);
+      var authors = _findOverviewSectionList(overview, "authors");
+      var items = <LiveAnchorItem>[];
+      for (var item in authors) {
+        var anchor = _parseSearchAnchor(item);
+        if (anchor.roomId.isNotEmpty) {
+          items.add(anchor);
+        }
+      }
+      return LiveSearchAnchorResult(hasMore: false, items: items);
+    } catch (_) {
+      return LiveSearchAnchorResult(hasMore: false, items: <LiveAnchorItem>[]);
+    }
+  }
+
+  Future<LiveSearchAnchorResult> _searchAnchors(
+    String keyword, {
+    int page = 1,
+  }) async {
+    var result = await HttpClient.instance.getJson(
+      "https://live.kuaishou.com/live_api/search/author",
+      queryParameters: {
+        "key": keyword,
+        "keyword": keyword,
+        "page": page,
+        "count": 15,
+        "ussid": "",
+        "lssid": "",
+      },
+      header: _searchHeaders(keyword),
+    );
+
+    var data = result["data"];
+    if (data is! Map || data["result"] != 1) {
+      return LiveSearchAnchorResult(hasMore: false, items: <LiveAnchorItem>[]);
+    }
+
+    var list = (data["list"] as List?) ?? [];
+    var items = <LiveAnchorItem>[];
+    for (var item in list) {
+      var anchor = _parseSearchAnchor(item);
+      if (anchor.roomId.isNotEmpty) {
+        items.add(anchor);
+      }
+    }
+
+    return LiveSearchAnchorResult(hasMore: list.length >= 15, items: items);
+  }
+
+  Future<Map> _getSearchOverview(String keyword) async {
+    var result = await HttpClient.instance.getJson(
+      "https://live.kuaishou.com/live_api/search/overview",
+      queryParameters: {"keyword": keyword, "ussid": ""},
+      header: _searchHeaders(keyword),
+    );
+    var data = result["data"];
+    return data is Map ? data : <String, dynamic>{};
+  }
+
+  List _findOverviewSectionList(Map overview, String type) {
+    var sections = overview["list"];
+    if (sections is! List) {
+      return [];
+    }
+    for (var section in sections) {
+      if (section is Map && section["type"] == type) {
+        return (section["list"] as List?) ?? [];
+      }
+    }
+    return [];
+  }
+
+  LiveRoomItem _parseSearchLiveRoom(dynamic item) {
+    if (item is! Map) {
+      return LiveRoomItem(roomId: '', title: '', cover: '', userName: '');
+    }
+
+    var author = item["author"] is Map ? item["author"] as Map : {};
+    var gameInfo = item["gameInfo"] is Map ? item["gameInfo"] as Map : {};
+    var cover =
+        item["poster"]?.toString() ??
+        item["coverUrl"]?.toString() ??
+        gameInfo["poster"]?.toString() ??
+        '';
+    if (cover.isNotEmpty && !_isImage(cover)) {
+      cover = '$cover.jpg';
+    }
+
+    return LiveRoomItem(
+      roomId:
+          author["id"]?.toString() ??
+          item["authorId"]?.toString() ??
+          item["userId"]?.toString() ??
+          '',
+      title:
+          item["caption"]?.toString() ??
+          item["title"]?.toString() ??
+          author["name"]?.toString() ??
+          '',
+      cover: cover,
+      userName:
+          author["name"]?.toString() ?? item["userName"]?.toString() ?? '',
+      online: _parseInt(item["watchingCount"]),
+    );
+  }
+
+  LiveAnchorItem _parseSearchAnchor(dynamic item) {
+    if (item is! Map) {
+      return LiveAnchorItem(
+        roomId: '',
+        avatar: '',
+        userName: '',
+        liveStatus: false,
+      );
+    }
+
+    return LiveAnchorItem(
+      roomId: item["id"]?.toString() ?? '',
+      avatar: item["avatar"]?.toString() ?? '',
+      userName: item["name"]?.toString() ?? '',
+      liveStatus: item["living"] == true,
+    );
   }
 
   // ==================== 房间详情 ====================
@@ -213,9 +465,10 @@ class KuaishouSite extends LiveSite {
     );
 
     try {
-      var text = RegExp(r"window\.__INITIAL_STATE__=(.*?);", multiLine: false)
-          .firstMatch(resultText)
-          ?.group(1);
+      var text = RegExp(
+        r"window\.__INITIAL_STATE__=(.*?);",
+        multiLine: false,
+      ).firstMatch(resultText)?.group(1);
 
       if (text == null) {
         return _offlineDetail(roomId);
@@ -273,6 +526,16 @@ class KuaishouSite extends LiveSite {
     );
   }
 
+  @override
+  Future<bool> getLiveStatus({required String roomId}) async {
+    try {
+      final detail = await getRoomDetail(roomId: roomId);
+      return detail.status;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ==================== 清晰度 ====================
 
   @override
@@ -282,15 +545,16 @@ class KuaishouSite extends LiveSite {
     List<LivePlayQuality> qualities = [];
 
     try {
-      var qualityList =
-          detail.data["h264"]["adaptationSet"]["representation"];
+      var qualityList = detail.data["h264"]["adaptationSet"]["representation"];
 
       for (var quality in qualityList ?? []) {
-        qualities.add(LivePlayQuality(
-          quality: quality["name"]?.toString() ?? '',
-          sort: quality["level"] ?? 0,
-          data: <String>[quality["url"]?.toString() ?? ''],
-        ));
+        qualities.add(
+          LivePlayQuality(
+            quality: quality["name"]?.toString() ?? '',
+            sort: quality["level"] ?? 0,
+            data: <String>[quality["url"]?.toString() ?? ''],
+          ),
+        );
       }
     } catch (_) {}
 
