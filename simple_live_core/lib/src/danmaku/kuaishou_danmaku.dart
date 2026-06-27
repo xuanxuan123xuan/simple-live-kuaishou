@@ -14,6 +14,7 @@ class KuaishouDanmakuArgs {
   final String expTag;
   final String attach;
   final String cookie;
+  final String userAgent;
 
   KuaishouDanmakuArgs({
     required this.roomId,
@@ -24,6 +25,9 @@ class KuaishouDanmakuArgs {
     this.expTag = '',
     this.attach = '',
     this.cookie = '',
+    this.userAgent =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   });
 
   @override
@@ -31,12 +35,13 @@ class KuaishouDanmakuArgs {
     return json.encode({
       "roomId": roomId,
       "liveStreamId": liveStreamId,
-      "token": token,
+      "token": token.isEmpty ? "" : "***",
       "websocketUrls": websocketUrls,
       "pageId": pageId,
       "expTag": expTag,
       "attach": attach,
-      "cookie": cookie,
+      "cookie": cookie.isEmpty ? "" : "***",
+      "userAgent": userAgent,
     });
   }
 }
@@ -55,8 +60,7 @@ class KuaishouDanmaku extends LiveDanmaku {
         args.liveStreamId.isEmpty ||
         args.token.isEmpty ||
         args.websocketUrls.isEmpty) {
-      onReady?.call();
-      onClose?.call("快手弹幕参数为空");
+      onClose?.call("快手弹幕凭证无效，请在账号设置中重新登录并完成验证");
       return;
     }
 
@@ -66,8 +70,7 @@ class KuaishouDanmaku extends LiveDanmaku {
       backupUrls: args.websocketUrls.skip(1).toList(),
       heartBeatTime: heartbeatTime,
       headers: {
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": args.userAgent,
         "Origin": "https://live.kuaishou.com",
         "Referer": "https://live.kuaishou.com/u/${args.roomId}",
         if (args.cookie.isNotEmpty) "Cookie": args.cookie,
@@ -92,7 +95,10 @@ class KuaishouDanmaku extends LiveDanmaku {
   Future stop() async {
     onMessage = null;
     onClose = null;
+    onReady = null;
     webScoketUtils?.close();
+    webScoketUtils = null;
+    danmakuArgs = null;
   }
 
   void joinRoom() {

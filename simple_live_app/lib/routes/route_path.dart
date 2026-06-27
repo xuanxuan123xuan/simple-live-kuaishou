@@ -66,6 +66,9 @@ class RoutePath {
   /// 抖音 Web登录
   static const kDouyinWebLogin = "/settings/account/douyin/web_login";
 
+  /// 快手 Web登录
+  static const kKuaishouWebLogin = "/settings/account/kuaishou/web_login";
+
   /// 数据同步
   static const kLocalSync = "/local_sync";
 

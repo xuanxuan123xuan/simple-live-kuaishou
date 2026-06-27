@@ -10,11 +10,13 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
+import 'package:simple_live_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class AccountController extends GetxController {
   static const _douyinHomeUrl = "https://www.douyin.com/";
+  static const _kuaishouHomeUrl = "https://live.kuaishou.com/";
 
   final douyinCookieCountdownTick = 0.obs;
   Timer? _douyinCookieCountdownTimer;
@@ -107,6 +109,10 @@ class AccountController extends GetxController {
     douyinLogin();
   }
 
+  void kuaishouTap() async {
+    kuaishouLogin();
+  }
+
   void douyinLogin() {
     final hasCookie = DouyinAccountService.instance.hasCookie.value;
     Utils.showBottomSheet(
@@ -193,6 +199,256 @@ class AccountController extends GetxController {
         douyinCookieCountdownTick.value++;
         SmartDialog.showToast("已清除自定义 Cookie，将使用默认 ttwid");
       }
+    }
+  }
+
+  void kuaishouLogin() {
+    final hasCookie = KuaishouAccountService.instance.hasCookie.value;
+    Utils.showBottomSheet(
+      title: "快手账号",
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (Platform.isAndroid || Platform.isIOS)
+            ListTile(
+              leading: const Icon(Icons.account_circle_outlined),
+              title: const Text("Web登录"),
+              subtitle: const Text("登录快手网页后自动读取 Cookie"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                Get.toNamed(RoutePath.kKuaishouWebLogin);
+              },
+            ),
+          if (!Platform.isAndroid && !Platform.isIOS)
+            ListTile(
+              leading: const Icon(Icons.open_in_browser),
+              title: const Text("浏览器登录后粘贴 Cookie"),
+              subtitle: const Text("使用系统浏览器打开快手直播，登录后回到这里粘贴完整 Cookie"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                Get.back();
+                await openKuaishouInBrowserThenConfigCookie();
+              },
+            ),
+          ListTile(
+            leading: const Icon(Icons.edit_outlined),
+            title: const Text("Cookie登录"),
+            subtitle: const Text("手动粘贴 live.kuaishou.com 完整 Cookie"),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Get.back();
+              doKuaishouCookieConfig();
+            },
+          ),
+          if (hasCookie)
+            ListTile(
+              leading: const Icon(Icons.visibility_outlined),
+              title: const Text("查看当前 Cookie"),
+              subtitle: const Text("可直接查看当前保存内容"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                showCurrentKuaishouCookie();
+              },
+            ),
+          if (hasCookie)
+            ListTile(
+              leading: const Icon(Icons.copy_all_outlined),
+              title: const Text("导出到剪贴板"),
+              subtitle: const Text("复制当前 Cookie 文本"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                exportKuaishouCookieToClipboard();
+              },
+            ),
+          if (Platform.isAndroid || Platform.isIOS)
+            ListTile(
+              leading: const Icon(Icons.file_open_outlined),
+              title: const Text("从文件导入 Cookie"),
+              subtitle: const Text("选择电脑传到手机上的 txt/cookie 文件"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                Get.back();
+                await importKuaishouCookieFromFile();
+              },
+            ),
+          if (hasCookie)
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text("清除 Cookie"),
+              subtitle: const Text("清除后快手搜索和弹幕可能受限"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                Get.back();
+                await clearKuaishouCookie();
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> clearKuaishouCookie() async {
+    if (KuaishouAccountService.instance.hasCookie.value) {
+      var result =
+          await Utils.showAlertDialog("确定要清除自定义快手 Cookie 吗？", title: "清除配置");
+      if (result) {
+        KuaishouAccountService.instance.clearCookie();
+        SmartDialog.showToast("已清除快手 Cookie");
+      }
+    }
+  }
+
+  void doKuaishouCookieConfig() {
+    final account = KuaishouAccountService.instance;
+    final cookieController = TextEditingController(text: account.cookie);
+    final kwwController = TextEditingController(text: account.kww);
+    Get.dialog(
+      AlertDialog(
+        title: const Text("配置快手弹幕凭证"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "快手弹幕需要 Cookie 和网页 localStorage 的 kwfv1（请求头 Kww）。也可以直接粘贴完整 Request Headers。",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: cookieController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: "Cookie",
+                  hintText: "粘贴 live.kuaishou.com Cookie 或完整请求头",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: kwwController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: "Kww / kwfv1",
+                  hintText: "从 Request Headers 的 Kww 或 localStorage 的 kwfv1 获取",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("取消")),
+          TextButton(
+            onPressed: () {
+              final rawInput = cookieController.text;
+              final cookie = _normalizeCookieInput(rawInput);
+              final pastedKww = _extractKuaishouKww(rawInput);
+              final kww = kwwController.text.trim().isNotEmpty
+                  ? kwwController.text.trim()
+                  : pastedKww;
+              Get.back();
+              if (cookie.isEmpty) {
+                account.clearCookie();
+                SmartDialog.showToast("已清除快手弹幕凭证");
+              } else {
+                account.setCookie(cookie, kww: kww);
+                SmartDialog.showToast(
+                  kww.isEmpty ? "Cookie 已保存，但缺少 Kww，弹幕可能不可用" : "快手弹幕凭证已保存",
+                );
+              }
+            },
+            child: const Text("确定"),
+          ),
+        ],
+      ),
+    ).whenComplete(() {
+      cookieController.dispose();
+      kwwController.dispose();
+    });
+  }
+
+  void showCurrentKuaishouCookie() {
+    final credentials = _currentKuaishouCredentialsText();
+    if (credentials.isEmpty) {
+      SmartDialog.showToast("当前没有快手弹幕凭证");
+      return;
+    }
+    Get.dialog(
+      AlertDialog(
+        title: const Text("当前快手弹幕凭证"),
+        content: SingleChildScrollView(child: SelectableText(credentials)),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("关闭")),
+          TextButton(
+            onPressed: () {
+              Utils.copyToClipboard(credentials);
+              Get.back();
+            },
+            child: const Text("复制"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void exportKuaishouCookieToClipboard() {
+    final credentials = _currentKuaishouCredentialsText();
+    if (credentials.isEmpty) {
+      SmartDialog.showToast("当前没有快手弹幕凭证");
+      return;
+    }
+    Utils.copyToClipboard(credentials);
+  }
+
+  Future<void> openKuaishouInBrowserThenConfigCookie() async {
+    try {
+      final opened = await launchUrlString(
+        _kuaishouHomeUrl,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) {
+        SmartDialog.showToast("无法打开系统浏览器，请手动打开 live.kuaishou.com 后粘贴 Cookie");
+      }
+    } catch (_) {
+      SmartDialog.showToast("无法打开系统浏览器，请手动打开 live.kuaishou.com 后粘贴 Cookie");
+    }
+    doKuaishouCookieConfig();
+  }
+
+  Future<void> importKuaishouCookieFromFile() async {
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        type: FileType.any,
+        withData: true,
+      );
+      if (picked == null || picked.files.isEmpty) {
+        return;
+      }
+      final file = picked.files.single;
+      String content;
+      if (file.bytes != null) {
+        content = utf8.decode(file.bytes!, allowMalformed: true);
+      } else if (file.path != null && file.path!.isNotEmpty) {
+        content = await File(file.path!).readAsString();
+      } else {
+        SmartDialog.showToast("无法读取所选文件");
+        return;
+      }
+      final cookie = _normalizeCookieInput(content);
+      if (cookie.isEmpty) {
+        SmartDialog.showToast("Cookie 文件内容为空");
+        return;
+      }
+      final kww = _extractKuaishouKww(content);
+      KuaishouAccountService.instance.setCookie(cookie, kww: kww);
+      SmartDialog.showToast("已从文件导入快手 Cookie");
+    } catch (e) {
+      SmartDialog.showToast("导入 Cookie 失败：$e");
     }
   }
 
@@ -418,7 +674,8 @@ class AccountController extends GetxController {
     if (cookie.isEmpty) {
       return "当前使用默认 ttwid，无法判断搜索登录态有效期。";
     }
-    if (DouyinCookieHelper.isOnlyTtwid(DouyinCookieHelper.normalizeInput(cookie))) {
+    if (DouyinCookieHelper.isOnlyTtwid(
+        DouyinCookieHelper.normalizeInput(cookie))) {
       return "当前仅为 ttwid，无法判断搜索登录态有效期；主播 / 房间搜索仍可能需要完整 Cookie。";
     }
 
@@ -485,6 +742,47 @@ class AccountController extends GetxController {
       }
     }
     return result;
+  }
+
+  String _currentKuaishouCredentialsText() {
+    final account = KuaishouAccountService.instance;
+    if (account.cookie.isEmpty) {
+      return "";
+    }
+    final lines = <String>["Cookie: ${account.cookie}"];
+    if (account.kww.isNotEmpty) {
+      lines.add("Kww: ${account.kww}");
+    }
+    return lines.join("\n");
+  }
+
+  String _extractKuaishouKww(String input) {
+    for (final line in input.trim().split(RegExp(r'\r?\n'))) {
+      final item = line.trim();
+      final lower = item.toLowerCase();
+      for (final name in const ["kww", "kwfv1"]) {
+        if (lower.startsWith("$name:") || lower.startsWith("$name=")) {
+          return item.substring(name.length + 1).trim();
+        }
+      }
+    }
+    return "";
+  }
+
+  String _normalizeCookieInput(String input) {
+    final text = input.trim();
+    if (text.isEmpty) {
+      return "";
+    }
+    final lines = text.split(RegExp(r'\r?\n'));
+    for (final line in lines) {
+      final item = line.trim();
+      final lower = item.toLowerCase();
+      if (lower.startsWith("cookie:")) {
+        return item.substring(item.indexOf(":") + 1).trim();
+      }
+    }
+    return text;
   }
 
   String _decodeCookieComponent(String value) {
