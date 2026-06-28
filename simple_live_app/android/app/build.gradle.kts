@@ -17,86 +17,10 @@ if (keystorePropertiesFile.exists()) {
 val hasReleaseKeystore = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
     .all { !keystoreProperties.getProperty(it).isNullOrBlank() }
 
-val syncDartQuickJsJniLibs = tasks.register("syncDartQuickJsJniLibs") {
-    val projectRoot = rootProject.projectDir.parentFile
-    val hooksRoot = projectRoot.resolve(".dart_tool/hooks_runner/dart_quickjs")
-    val sharedBuildRoot = projectRoot.resolve(".dart_tool/hooks_runner/shared/dart_quickjs/build")
-    val generatedRoot = projectDir.resolve("build/generated/dart_quickjs/jniLibs")
-    val abiByArch = mapOf(
-        "arm" to "armeabi-v7a",
-        "arm64" to "arm64-v8a",
-        "x64" to "x86_64"
-    )
-
-    fun jsonStringValue(text: String, key: String): String? {
-        return Regex("\"$key\"\\s*:\\s*\"([^\"]+)\"")
-            .find(text)
-            ?.groupValues
-            ?.get(1)
-    }
-
-    doLast {
-        if (!hooksRoot.exists()) {
-            logger.warn("dart_quickjs native asset hooks directory does not exist: $hooksRoot")
-            return@doLast
-        }
-
-        val candidates = hooksRoot
-            .walkTopDown()
-            .filter { it.isFile && it.name == "input.json" }
-            .mapNotNull { inputFile ->
-                val inputText = inputFile.readText(Charsets.UTF_8)
-                if (jsonStringValue(inputText, "target_os") != "android") {
-                    return@mapNotNull null
-                }
-                val abi = abiByArch[jsonStringValue(inputText, "target_architecture")]
-                    ?: return@mapNotNull null
-                val buildId = inputFile.parentFile.name
-                val source = sharedBuildRoot.resolve("$buildId/libdart_quickjs.so")
-                if (!source.exists()) {
-                    return@mapNotNull null
-                }
-                val linkingEnabled =
-                    Regex("\"linking_enabled\"\\s*:\\s*true").containsMatchIn(inputText)
-                Triple(abi, linkingEnabled, source)
-            }
-            .toList()
-
-        if (candidates.isEmpty()) {
-            logger.warn("No dart_quickjs Android native libraries were found under $hooksRoot")
-            return@doLast
-        }
-
-        generatedRoot.deleteRecursively()
-        candidates
-            .groupBy { it.first }
-            .forEach { (abi, items) ->
-                val selected = items
-                    .sortedWith(compareByDescending<Triple<String, Boolean, java.io.File>> { it.second }
-                        .thenByDescending { it.third.lastModified() })
-                    .first()
-                    .third
-                val target = generatedRoot.resolve("$abi/libdart_quickjs.so")
-                target.parentFile.mkdirs()
-                selected.copyTo(target, overwrite = true)
-            }
-    }
-}
-
-tasks.named("preBuild") {
-    dependsOn(syncDartQuickJsJniLibs)
-}
-
 android {
     namespace = "com.xycz.simple_live"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-
-    sourceSets {
-        getByName("main") {
-            jniLibs.srcDirs("build/generated/dart_quickjs/jniLibs")
-        }
-    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

@@ -58,7 +58,7 @@ class KuaishouWebLoginController extends BaseController {
   ) {
     if (request.isForMainFrame == true) {
       progress.value = 1;
-      errorMessage.value = "HTTP " + (response.statusCode?.toString() ?? "-");
+      errorMessage.value = "HTTP ${response.statusCode ?? "-"}";
     }
   }
 
@@ -81,9 +81,8 @@ class KuaishouWebLoginController extends BaseController {
       if (localStorageKww.isNotEmpty &&
           _readCookieValue(cookie, 'kwfv1').isEmpty) {
         final encodedKww = Uri.encodeComponent(localStorageKww);
-        cookie = cookie.isEmpty
-            ? 'kwfv1=' + encodedKww
-            : cookie + '; kwfv1=' + encodedKww;
+        cookie =
+            cookie.isEmpty ? 'kwfv1=$encodedKww' : '$cookie; kwfv1=$encodedKww';
       }
       final kww = localStorageKww.isNotEmpty
           ? localStorageKww
@@ -133,7 +132,7 @@ class KuaishouWebLoginController extends BaseController {
         }
       }
     }
-    return values.entries.map((e) => e.key + "=" + e.value).join("; ");
+    return values.entries.map((e) => "${e.key}=${e.value}").join("; ");
   }
 
   Future<String> _readKww() async {

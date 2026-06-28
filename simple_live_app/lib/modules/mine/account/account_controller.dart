@@ -217,7 +217,7 @@ class AccountController extends GetxController {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Get.back();
-                Get.toNamed(RoutePath.kKuaishouWebLogin);
+                kuaishouWebLogin();
               },
             ),
           if (!Platform.isAndroid && !Platform.isIOS)
@@ -288,6 +288,12 @@ class AccountController extends GetxController {
         ],
       ),
     );
+  }
+
+  bool get canUseKuaishouWebLogin => Platform.isAndroid || Platform.isIOS;
+
+  void kuaishouWebLogin() {
+    Get.toNamed(RoutePath.kKuaishouWebLogin);
   }
 
   Future<void> clearKuaishouCookie() async {
@@ -732,7 +738,7 @@ class AccountController extends GetxController {
 
   String _currentKuaishouCredentialsText() {
     final cookie = KuaishouAccountService.instance.cookie;
-    return cookie.isEmpty ? "" : "Cookie: " + cookie;
+    return cookie.isEmpty ? "" : "Cookie: $cookie";
   }
 
   String _extractKuaishouKww(String input) {

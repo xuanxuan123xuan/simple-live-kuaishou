@@ -8,9 +8,9 @@ on:
         type: boolean
         default: true
       ref:
-        description: "Git ref to build, for example master or v1.12.0"
+        description: "Git ref to build, for example main or v1.12.0"
         required: false
-        default: "master"
+        default: "main"
       upload_release:
         description: "Upload build outputs to the matching GitHub Release when ref is a tag"
         required: false

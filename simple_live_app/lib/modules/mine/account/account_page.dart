@@ -85,7 +85,12 @@ class AccountPage extends GetView<AccountController> {
               subtitle: Text(KuaishouAccountService.instance.hasCookie.value
                   ? "已配置 Cookie，可用于搜索和弹幕"
                   : "建议配置 Cookie，用于搜索和弹幕"),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: controller.canUseKuaishouWebLogin
+                  ? TextButton(
+                      onPressed: controller.kuaishouWebLogin,
+                      child: const Text("网页登录"),
+                    )
+                  : const Icon(Icons.chevron_right),
               onTap: controller.kuaishouTap,
             ),
           ),

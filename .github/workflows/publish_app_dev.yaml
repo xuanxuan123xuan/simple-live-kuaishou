@@ -316,7 +316,7 @@ jobs:
   build-windows:
     needs: resolve-targets
     if: ${{ needs.resolve-targets.outputs.build_windows == 'true' }}
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions:
       contents: write
     steps:

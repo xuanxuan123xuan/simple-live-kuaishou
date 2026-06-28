@@ -54,7 +54,7 @@ class KuaishouWebLoginPage extends GetView<KuaishouWebLoginController> {
               child: ListTile(
                 leading: const Icon(Icons.error_outline),
                 title: const Text("快手网页加载失败"),
-                subtitle: Text(error + "\n请重试；仍无法打开时返回并选择 Cookie 登录。"),
+                subtitle: Text("$error\n请重试；仍无法打开时返回并选择 Cookie 登录。"),
                 trailing: TextButton(
                   onPressed: controller.reload,
                   child: const Text("重试"),
