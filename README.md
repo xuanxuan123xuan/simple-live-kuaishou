@@ -1,88 +1,160 @@
-<p align="center">
-    <img width="128" src="simple_live_app/assets/logo.png" alt="Simple Live">
-</p>
-<h2 align="center">Simple Live + 快手</h2>
+# Simple Live + 快手
 
-<p align="center">
-基于 Simple Live 的五平台直播聚合应用，新增快手直播支持
-</p>
+跨平台聚合直播客户端，基于 Simple Live 持续维护，在哔哩哔哩、斗鱼、虎牙、抖音之外补充了完整的快手直播支持。
 
-## 项目说明
+## 功能概览
 
-本项目基于 [June6699/dart_simple_live](https://github.com/June6699/dart_simple_live) fork，在原有四平台（哔哩哔哩、斗鱼、虎牙、抖音）的基础上，从 [PureLive](https://github.com/heartsg/pure_live) 移植了快手直播适配器，实现五平台聚合。
+- 五平台直播浏览、搜索、播放与弹幕
+- 快手分类、推荐、主播搜索、直播间搜索和多清晰度播放
+- 快手 Web 登录、手动 Cookie 导入及 `kwfv1`/Kww 自动处理
+- 快手 protobuf WebSocket 弹幕、心跳、gzip 解压和备用线路重连
+- Cookie 到期时间提示、服务器 Cookie 自动刷新合并
+- 直播状态多源容错，降低“正在直播却显示未开播”的误判
+- 弹幕屏蔽、去重、重点动态聚合和全屏重点动态提示
+- Android、iOS、Windows GitHub Actions 构建
 
-### 与上游项目的关系
+## 平台支持
 
-- **基础框架**：完整保留 SimpleLive (June6699) 的架构、UI、弹幕系统、播放逻辑等
-- **新增功能**：快手直播适配器（分类浏览、推荐列表、房间详情、多清晰度播放）
-- **未移植功能**：快手搜索、快手弹幕（快手弹幕协议较复杂，暂为空实现）
+| 平台 | 直播 | 弹幕 | 搜索 | 分类/推荐 |
+| --- | --- | --- | --- | --- |
+| 哔哩哔哩 | ✅ | ✅ | ✅ | ✅ |
+| 斗鱼 | ✅ | ✅ | ✅ | ✅ |
+| 虎牙 | ✅ | ✅ | ✅ | ✅ |
+| 抖音 | ✅ | ✅ | ✅ | ✅ |
+| 快手 | ✅ | ✅ | ✅ | ✅ |
 
-### 技术架构
+## 快手支持
 
-| 模块 | 说明 |
-|------|------|
-| `simple_live_core` | 纯 Dart 核心库，包含各平台适配器 |
-| `simple_live_app` | Flutter 移动端应用 |
-| `simple_live_tv_app` | Flutter TV 端应用 |
-| `simple_live_console` | 命令行调试工具 |
+### 浏览与播放
 
-### 快手适配器实现细节
+- 动态获取直播分类和推荐列表
+- 搜索直播间与主播
+- 从直播页解析播放信息和清晰度列表
+- 支持 H.264 多码率播放地址
+- 列表与搜索优先使用直播 `caption`，详情字段缺失时按可用信息回退
+- 匿名详情优先、登录 Cookie 详情回退
+- 当状态字段失真时，使用直播流 ID 与有效播放地址辅助判断开播状态
 
-快手适配器 (`simple_live_core/lib/src/kuaishou_site.dart`) 核心实现：
+### 弹幕
 
-- **房间详情**：通过 HTML 抓取 `window.__INITIAL_STATE__` 获取直播间信息
-- **Cookie 管理**：使用 Dio + CookieJar 自动采集 Cookie
-- **DID 注册**：模拟设备注册以获取合法请求身份
-- **分类数据**：8 大父分类（热门/网游/单机/手游/棋牌/娱乐/综合/文化），子分类从 API 动态获取
-- **清晰度**：解析 `h264.adaptationSet.representation` 获取多码率播放地址
-- **弹幕/搜索**：暂为空实现，返回默认值
+- 解析快手 WebSocket protobuf 数据
+- 支持评论弹幕与用户名、颜色解析
+- 支持 gzip 压缩消息
+- 支持心跳、备用 WebSocket 地址和自动重连
+- 自动携带直播间 token、stream ID、page ID、Cookie 与浏览器请求头
 
-## 构建
+### 登录与 Cookie
 
-### 环境要求
+移动端可在“账号管理 → 快手直播”进入快手网页登录，也可以手动粘贴完整 Cookie 或 Request Headers。
 
-- Flutter SDK >= 3.0
-- Android SDK（如需构建 APK）
-- Dart SDK >= 3.0
+- Android/iOS 内置 WebView 登录入口
+- 自动读取 Cookie 与 localStorage 中的 `kwfv1`
+- 手动输入不要求额外填写 Kww
+- 展示可读取到的登录凭证预计剩余有效期
+- 服务器返回的新 Cookie 会覆盖旧值，避免短期 `web_st` 无法续期
+- 无法可靠取得到期时间时明确显示“有效期无法判断”
 
-### 构建步骤
+> Cookie 可能因退出登录、修改密码或平台风控提前失效。请勿公开分享 Cookie、token 或导出的账号文件。
+
+## 弹幕增强
+
+- 关键词和用户屏蔽
+- 重复弹幕去重
+- 重点动态：在本地统计短时间内重复出现的弹幕
+- 可配置统计跨度、起显次数、展示时间和保留数量
+- 可在全屏播放器中显示重点动态
+
+重点动态仅处理本地已收到的弹幕，不会额外请求平台接口，也不会消耗 Cookie。
+
+## 下载与构建
+
+仓库工作流支持以下应用构建：
+
+- Android APK
+- iOS IPA
+- Windows 压缩包
+
+可在 GitHub Actions 中手动运行对应的 App workflow。当前维护重点是 `simple_live_app`，TV 版本不在本分支的主要适配范围内。
+
+### 本地环境
+
+- Flutter SDK（需内置 Dart 3.10 或更高版本）
+- Android SDK（构建 Android）
+- Xcode（本机构建 iOS）
+- Visual Studio 2022 C++ 工具链（构建 Windows 或运行带原生 hook 的测试）
+
+### 获取依赖
 
 ```bash
-# 获取依赖
-cd simple_live_app
+cd simple_live_core
+dart pub get
+
+cd ../simple_live_app
 flutter pub get
-
-# 构建 Debug APK
-flutter build apk --debug
-
-# 构建 Release APK（推荐按 ABI 分包以减小体积）
-flutter build apk --release --split-per-abi
 ```
 
-### 中国大陆构建注意
+### 构建 Android
 
-- Pub 镜像：`PUB_HOSTED_URL=https://pub.flutter-io.cn`
-- Flutter Storage：`FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn`
-- Gradle 分发：建议使用腾讯云镜像替换 `gradle-wrapper.properties` 中的 `distributionUrl`
-- Maven：在 `settings.gradle.kts` 和 `build.gradle.kts` 中添加阿里云镜像
-- media_kit：该库在构建时从 GitHub 下载 native JAR，大陆可能需要手动预下载或使用代理
+```bash
+cd simple_live_app
+flutter build apk --release
+```
 
-## 支持的平台
+### 构建 Windows
 
-| 平台 | 直播 | 弹幕 | 搜索 | 分类 | 说明 |
-|------|------|------|------|------|------|
-| 哔哩哔哩 | ✅ | ✅ | ✅ | ✅ | SimpleLive 内置 |
-| 斗鱼 | ✅ | ✅ | ✅ | ✅ | SimpleLive 内置 |
-| 虎牙 | ✅ | ✅ | ✅ | ✅ | SimpleLive 内置 |
-| 抖音 | ✅ | ✅ | ✅ | ✅ | SimpleLive 内置 |
-| 快手 | ✅ | ❌ | ❌ | ✅ | 从 PureLive 移植 |
+```bash
+cd simple_live_app
+flutter build windows --release
+```
 
-## 致谢
+### 构建 iOS
 
-- [xiaoyaocz/dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live) — SimpleLive 原作者
-- [June6699/dart_simple_live](https://github.com/June6699/dart_simple_live) — 活跃维护的 fork 版本
-- [PureLive](https://github.com/heartsg/pure_live) — 快手适配器的参考实现
+```bash
+cd simple_live_app
+flutter build ipa --release
+```
 
-## License
+iOS 本地构建必须在 macOS/Xcode 环境运行；Windows 用户可使用仓库的 iOS GitHub Actions workflow。
 
-本项目遵循原 SimpleLive 的开源许可证。
+## 项目结构
+
+| 目录 | 说明 |
+| --- | --- |
+| `simple_live_core` | 各平台接口、播放地址解析和弹幕协议 |
+| `simple_live_app` | Flutter 主应用，覆盖 Android、iOS、Windows 等平台 |
+| `simple_live_console` | 核心接口调试工具 |
+| `simple_live_tv_app` | 上游 TV 应用代码，当前不作为主要维护目标 |
+| `.github/workflows` | App 自动构建与发布工作流 |
+
+## 开发验证
+
+```bash
+# Core 静态分析
+cd simple_live_core
+dart analyze
+
+# 快手相关测试
+dart test test/kuaishou_site_test.dart test/kuaishou_danmaku_test.dart
+
+# App 静态分析
+cd ../simple_live_app
+flutter analyze
+```
+
+`dart_quickjs` 包含原生构建 hook；Windows 运行部分测试时需要可用的 MSVC C/C++ 编译器。
+
+## 更新日志
+
+参见 [CHANGELOG.md](CHANGELOG.md)。
+
+## 上游与致谢
+
+- [xiaoyaocz/dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live) — Simple Live 原始项目
+- [June6699/dart_simple_live](https://github.com/June6699/dart_simple_live) — 本仓库采用的上游维护基础
+- [heartsg/pure_live](https://github.com/heartsg/pure_live) — 快手站点适配参考
+- [OrdinaryRoad-Project/ordinaryroad-barrage-fly](https://github.com/OrdinaryRoad-Project/ordinaryroad-barrage-fly) — 快手弹幕协议对照参考
+- [wushuaihua520/BarrageGrab](https://github.com/wushuaihua520/BarrageGrab) — 多平台弹幕项目参考
+
+## 许可
+
+项目沿用仓库中的 [LICENSE](LICENSE)。使用、修改或分发前请同时遵守各直播平台的服务条款与当地法律法规。

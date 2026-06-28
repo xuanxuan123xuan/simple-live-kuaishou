@@ -10,6 +10,11 @@ class KuaishouAccountService extends GetxService {
   var cookie = "";
   var kww = "";
   var hasCookie = false.obs;
+  var cookieExpiresAtMs = 0.obs;
+
+  DateTime? get cookieExpiresAt => cookieExpiresAtMs.value > 0
+      ? DateTime.fromMillisecondsSinceEpoch(cookieExpiresAtMs.value)
+      : null;
   @override
   void onInit() {
     cookie = LocalStorageService.instance.getValue(
@@ -19,6 +24,10 @@ class KuaishouAccountService extends GetxService {
     kww = LocalStorageService.instance.getValue(
       LocalStorageService.kKuaishouKww,
       "",
+    );
+    cookieExpiresAtMs.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kKuaishouCookieExpiresAt,
+      0,
     );
     hasCookie.value = cookie.isNotEmpty;
     setSite();
@@ -35,7 +44,7 @@ class KuaishouAccountService extends GetxService {
     }
   }
 
-  void setCookie(String cookie, {String? kww}) {
+  void setCookie(String cookie, {String? kww, DateTime? expiresAt}) {
     this.cookie = cookie;
     if (kww != null) {
       this.kww = kww;
@@ -47,6 +56,11 @@ class KuaishouAccountService extends GetxService {
     LocalStorageService.instance.setValue(
       LocalStorageService.kKuaishouKww,
       this.kww,
+    );
+    cookieExpiresAtMs.value = expiresAt?.millisecondsSinceEpoch ?? 0;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kKuaishouCookieExpiresAt,
+      cookieExpiresAtMs.value,
     );
     hasCookie.value = cookie.isNotEmpty;
     setSite();
@@ -62,6 +76,11 @@ class KuaishouAccountService extends GetxService {
     LocalStorageService.instance.setValue(
       LocalStorageService.kKuaishouKww,
       "",
+    );
+    cookieExpiresAtMs.value = 0;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kKuaishouCookieExpiresAt,
+      0,
     );
     hasCookie.value = false;
     setSite();

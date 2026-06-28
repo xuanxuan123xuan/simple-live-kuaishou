@@ -103,6 +103,64 @@ class KuaishouSite extends LiveSite {
     return fallback.trim();
   }
 
+  static String resolveRoomTitle(Map room) {
+    final liveStream = room["liveStream"] is Map
+        ? room["liveStream"] as Map
+        : const {};
+    final gameInfo = room["gameInfo"] is Map
+        ? room["gameInfo"] as Map
+        : const {};
+    final author = room["author"] is Map ? room["author"] as Map : const {};
+    for (final value in [
+      room["caption"],
+      room["title"],
+      liveStream["caption"],
+      liveStream["title"],
+      gameInfo["name"],
+      author["name"],
+    ]) {
+      final title = value?.toString().trim() ?? '';
+      if (title.isNotEmpty) {
+        return title;
+      }
+    }
+    return '';
+  }
+
+  static bool resolveLiveStatus(Map room) {
+    if (_isLiveFlag(room["isLiving"]) || _isLiveFlag(room["living"])) {
+      return true;
+    }
+    final liveStream = room["liveStream"] is Map
+        ? room["liveStream"] as Map
+        : room;
+    final liveStreamId = liveStream["id"]?.toString().trim() ?? '';
+    return liveStreamId.isNotEmpty &&
+        _containsPlayableUrl(liveStream["playUrls"]);
+  }
+
+  static bool _isLiveFlag(dynamic value) {
+    return value == true ||
+        value == 1 ||
+        value?.toString().toLowerCase() == "true";
+  }
+
+  static bool _containsPlayableUrl(dynamic value) {
+    if (value is String) {
+      final url = value.trim().toLowerCase();
+      return url.startsWith("http://") ||
+          url.startsWith("https://") ||
+          url.startsWith("rtmp://");
+    }
+    if (value is Map) {
+      return value.values.any(_containsPlayableUrl);
+    }
+    if (value is Iterable) {
+      return value.any(_containsPlayableUrl);
+    }
+    return false;
+  }
+
   @override
   LiveDanmaku getDanmaku() => KuaishouDanmaku();
 
@@ -233,7 +291,7 @@ class KuaishouSite extends LiveSite {
           items.add(
             LiveRoomItem(
               roomId: author["id"]?.toString() ?? '',
-              title: author["name"]?.toString() ?? '',
+              title: resolveRoomTitle(titem),
               cover: cover,
               userName: author["name"]?.toString() ?? '',
               online: _parseInt(titem["watchingCount"]),
@@ -479,63 +537,104 @@ class KuaishouSite extends LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    var url = "https://live.kuaishou.com/u/$roomId";
+    final url = "https://live.kuaishou.com/u/$roomId";
 
-    // 获取 Cookie
     await _getCookie(url);
-    // 注册 DID
     await _registerDid();
-    var mHeaders = _headersWithCookie;
 
-    var resultText = await HttpClient.instance.getText(
-      url,
-      queryParameters: {},
-      header: mHeaders,
+    final anonymousDetail = await _loadRoomDetail(
+      url: url,
+      roomId: roomId,
+      headers: _headers,
     );
+    if (anonymousDetail?.status == true) {
+      return anonymousDetail!;
+    }
 
+    if (_currentCookieHeader().isNotEmpty) {
+      final cookieDetail = await _loadRoomDetail(
+        url: url,
+        roomId: roomId,
+        headers: _headersWithCookie,
+      );
+      if (cookieDetail != null &&
+          (cookieDetail.status || anonymousDetail == null)) {
+        return cookieDetail;
+      }
+    }
+
+    return anonymousDetail ?? _offlineDetail(roomId);
+  }
+
+  Future<LiveRoomDetail?> _loadRoomDetail({
+    required String url,
+    required String roomId,
+    required Map<String, dynamic> headers,
+  }) async {
     try {
-      var text = RegExp(
+      final resultText = await HttpClient.instance.getText(
+        url,
+        queryParameters: const {},
+        header: headers,
+      );
+      return await _parseRoomDetail(resultText, roomId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<LiveRoomDetail?> _parseRoomDetail(
+    String resultText,
+    String roomId,
+  ) async {
+    try {
+      final text = RegExp(
         r"window\.__INITIAL_STATE__=(.*?);",
         multiLine: false,
       ).firstMatch(resultText)?.group(1);
-
       if (text == null) {
-        return _offlineDetail(roomId);
+        return null;
       }
 
-      var transferData = text.replaceAll("undefined", "null");
-      var jsonObj = jsonDecode(transferData);
-
-      var playList = jsonObj["liveroom"]["playList"];
-      if (playList == null || playList.isEmpty) {
-        return _offlineDetail(roomId);
+      final transferData = text.replaceAll("undefined", "null");
+      final jsonObj = jsonDecode(transferData);
+      final playList = jsonObj["liveroom"]["playList"];
+      if (playList is! List || playList.isEmpty || playList.first is! Map) {
+        return null;
       }
 
-      var first = playList[0];
-      var liveStream = first["liveStream"];
-      var author = first["author"];
-      var gameInfo = first["gameInfo"];
-      var isLiving = first["isLiving"] ?? false;
-      var liveStreamId = liveStream["id"]?.toString() ?? '';
+      final first = playList.first as Map;
+      final liveStream = first["liveStream"] is Map
+          ? first["liveStream"] as Map
+          : const {};
+      final author = first["author"] is Map ? first["author"] as Map : const {};
+      final gameInfo = first["gameInfo"] is Map
+          ? first["gameInfo"] as Map
+          : const {};
+      final isLiving = resolveLiveStatus(first);
+      final liveStreamId = liveStream["id"]?.toString() ?? '';
       var websocketUrls = <String>[];
-      for (var item in jsonObj["liveroom"]["websocketUrls"] ?? []) {
-        var url = item?.toString() ?? '';
-        if (url.isNotEmpty) {
-          websocketUrls.add(url);
+      for (final item in jsonObj["liveroom"]["websocketUrls"] ?? []) {
+        final websocketUrl = item?.toString() ?? '';
+        if (websocketUrl.isNotEmpty) {
+          websocketUrls.add(websocketUrl);
         }
       }
       var danmakuToken = jsonObj["liveroom"]["token"]?.toString() ?? '';
       final websocketInfo = first["websocketInfo"] is Map
           ? first["websocketInfo"] as Map
-          : {};
+          : const {};
       if (danmakuToken.isEmpty) {
         danmakuToken = websocketInfo["token"]?.toString() ?? '';
       }
       if (websocketUrls.isEmpty) {
-        for (var item in websocketInfo["websocketUrls"] ?? []) {
-          var url = item?.toString() ?? '';
-          if (url.isNotEmpty) {
-            websocketUrls.add(url);
+        for (final item
+            in websocketInfo["websocketUrls"] ??
+                websocketInfo["webSocketAddresses"] ??
+                const []) {
+          final websocketUrl = item?.toString() ?? '';
+          if (websocketUrl.isNotEmpty) {
+            websocketUrls.add(websocketUrl);
           }
         }
       }
@@ -552,14 +651,14 @@ class KuaishouSite extends LiveSite {
         }
       }
 
-      var cover = liveStream['poster']?.toString() ?? '';
+      var cover = liveStream["poster"]?.toString() ?? '';
       if (cover.isNotEmpty && !_isImage(cover)) {
         cover = '$cover.jpg';
       }
 
       return LiveRoomDetail(
         roomId: author["id"]?.toString() ?? roomId,
-        title: author["name"]?.toString() ?? '',
+        title: resolveRoomTitle(first),
         cover: cover,
         userName: author["name"]?.toString() ?? '',
         userAvatar: author["avatar"]?.toString() ?? '',
@@ -584,7 +683,7 @@ class KuaishouSite extends LiveSite {
         categoryName: gameInfo["name"]?.toString(),
       );
     } catch (_) {
-      return _offlineDetail(roomId);
+      return null;
     }
   }
 
@@ -819,7 +918,7 @@ class KuaishouSite extends LiveSite {
 
   String _currentCookieHeader() {
     return customCookie.isNotEmpty
-        ? _mergeCookie(cookie, customCookie)
+        ? _mergeCookie(customCookie, cookie)
         : cookie;
   }
 

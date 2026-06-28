@@ -736,6 +736,25 @@ class AccountController extends GetxController {
     return result;
   }
 
+  String getKuaishouCookieSummaryText() {
+    douyinCookieCountdownTick.value;
+    final account = KuaishouAccountService.instance;
+    account.hasCookie.value;
+    final cookie = account.cookie;
+    if (cookie.isEmpty) {
+      return "建议配置 Cookie，用于搜索和弹幕";
+    }
+    final expiry = account.cookieExpiresAt;
+    if (expiry == null) {
+      return "已配置 Cookie（${cookie.length} 字符），有效期无法判断";
+    }
+    final remain = expiry.difference(DateTime.now());
+    if (remain.isNegative) {
+      return "已配置 Cookie（${cookie.length} 字符），预计有效期已过";
+    }
+    return "已配置 Cookie（${cookie.length} 字符），预计剩余 ${_formatDurationShort(remain)}";
+  }
+
   String _currentKuaishouCredentialsText() {
     final cookie = KuaishouAccountService.instance.cookie;
     return cookie.isEmpty ? "" : "Cookie: $cookie";

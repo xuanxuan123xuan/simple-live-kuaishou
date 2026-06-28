@@ -76,7 +76,8 @@ class KuaishouWebLoginController extends BaseController {
     }
     checking.value = true;
     try {
-      var cookie = await _readCookie();
+      final snapshot = await _readCookie();
+      var cookie = snapshot.cookie;
       final localStorageKww = await _readKww();
       if (localStorageKww.isNotEmpty &&
           _readCookieValue(cookie, 'kwfv1').isEmpty) {
@@ -93,7 +94,11 @@ class KuaishouWebLoginController extends BaseController {
         }
         return;
       }
-      KuaishouAccountService.instance.setCookie(cookie, kww: kww);
+      KuaishouAccountService.instance.setCookie(
+        cookie,
+        kww: kww,
+        expiresAt: snapshot.expiresAt,
+      );
       if (kww.isEmpty) {
         if (!silent || autoClose) {
           SmartDialog.showToast("Cookie 已保存，但未获取到 kwfv1；请刷新页面或完成验证后再保存");
@@ -116,8 +121,15 @@ class KuaishouWebLoginController extends BaseController {
     }
   }
 
-  Future<String> _readCookie() async {
+  Future<_KuaishouCookieSnapshot> _readCookie() async {
+    const expiryCookieNames = [
+      "kuaishou.live.web_st",
+      "kuaishou.server.web_st",
+      "kuaishou.live.web_at",
+      "passToken",
+    ];
     final values = <String, String>{};
+    int? latestExpiresDate;
     for (final url in const [
       "https://live.kuaishou.com",
       "https://kuaishou.com",
@@ -130,9 +142,23 @@ class KuaishouWebLoginController extends BaseController {
         if (name.isNotEmpty && value.isNotEmpty) {
           values.putIfAbsent(name, () => value);
         }
+        final expiresDate = item.expiresDate;
+        if (expiryCookieNames.contains(name) &&
+            expiresDate != null &&
+            expiresDate > 0) {
+          if (latestExpiresDate == null || expiresDate > latestExpiresDate) {
+            latestExpiresDate = expiresDate;
+          }
+        }
       }
     }
-    return values.entries.map((e) => "${e.key}=${e.value}").join("; ");
+    final expiresAt = latestExpiresDate == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(latestExpiresDate);
+    return _KuaishouCookieSnapshot(
+      cookie: values.entries.map((e) => "${e.key}=${e.value}").join("; "),
+      expiresAt: expiresAt,
+    );
   }
 
   Future<String> _readKww() async {
@@ -154,4 +180,14 @@ class KuaishouWebLoginController extends BaseController {
     }
     return '';
   }
+}
+
+class _KuaishouCookieSnapshot {
+  final String cookie;
+  final DateTime? expiresAt;
+
+  const _KuaishouCookieSnapshot({
+    required this.cookie,
+    required this.expiresAt,
+  });
 }
