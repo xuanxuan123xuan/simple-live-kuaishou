@@ -1,0 +1,337 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (tag like v1.0.0, or branch like main)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-22.04
+    outputs:
+      ref: ${{ steps.resolve.outputs.ref }}
+      tag_name: ${{ steps.resolve.outputs.tag_name }}
+      is_tag: ${{ steps.resolve.outputs.is_tag }}
+      prerelease: ${{ steps.resolve.outputs.prerelease }}
+    steps:
+      - id: resolve
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ref="${{ github.ref }}"
+          else
+            ref="${{ inputs.ref }}"
+            if [[ -z "$ref" ]]; then
+              ref="refs/heads/main"
+            elif [[ "$ref" != refs/* ]]; then
+              ref="refs/tags/$ref"
+            fi
+          fi
+
+          tag_name="$ref"
+          tag_name="${tag_name#refs/tags/}"
+          tag_name="${tag_name#refs/heads/}"
+
+          is_tag="false"
+          prerelease="false"
+          if [[ "$ref" == refs/tags/v* ]]; then
+            is_tag="true"
+          fi
+          if [[ "$tag_name" == *beta* || "$tag_name" == *alpha* || "$tag_name" == *pre* || "$tag_name" == *rc* ]]; then
+            prerelease="true"
+          fi
+
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+          echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+  # ── Android ──
+  android:
+    needs: resolve
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+
+      - name: Prepare Android keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [[ -n "$KEYSTORE_BASE64" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" && -n "$KEY_ALIAS" ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | openssl base64 -d -A > simple_live_app/android/release-keystore.jks
+            printf 'storeFile=../release-keystore.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=%s\n' "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > simple_live_app/android/key.properties
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.x"
+          cache: true
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Read app version
+        id: app_version
+        shell: bash
+        run: |
+          app_version="$(grep '^version:' simple_live_app/pubspec.yaml | awk '{print $2}')"
+          echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+      - name: Build Android APK
+        run: |
+          cd simple_live_app
+          flutter build apk --release
+
+      - name: Rename APK
+        id: apk_asset
+        shell: bash
+        run: |
+          asset_path="simple_live_app/build/app/outputs/flutter-apk/simple_live_app-${{ steps.app_version.outputs.app_version }}-android.apk"
+          cp simple_live_app/build/app/outputs/flutter-apk/app-release.apk "$asset_path"
+          echo "asset_path=$asset_path" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: ${{ steps.apk_asset.outputs.asset_path }}
+
+      - name: Upload to Release
+        if: ${{ needs.resolve.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag_name }}
+          prerelease: ${{ needs.resolve.outputs.prerelease }}
+          token: ${{ github.token }}
+          fail_on_unmatched_files: false
+          files: ${{ steps.apk_asset.outputs.asset_path }}
+
+  # ── iOS ──
+  ios:
+    needs: resolve
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.x"
+          cache: true
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Build iOS
+        run: |
+          cd simple_live_app
+          flutter build ios --release --no-codesign
+
+      - name: Create unsigned IPA
+        run: |
+          cd simple_live_app
+          mkdir -p build/ios/iphoneos/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/Runner.app
+          cd build/ios/iphoneos/
+          zip -q -r ios_no_sign.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
+
+      - name: Upload to Release
+        if: ${{ needs.resolve.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag_name }}
+          prerelease: ${{ needs.resolve.outputs.prerelease }}
+          token: ${{ github.token }}
+          fail_on_unmatched_files: false
+          files: simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
+
+  # ── macOS ──
+  macos:
+    needs: resolve
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.x"
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install appdmg
+        run: npm install -g appdmg
+
+      - name: Install flutter_distributor
+        run: dart pub global activate flutter_distributor
+
+      - name: Build macOS
+        id: build_macos
+        continue-on-error: true
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform macos --targets dmg,zip --skip-clean
+
+      - name: Upload macOS to Artifacts
+        if: ${{ steps.build_macos.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            simple_live_app/build/dist/*/*.dmg
+            simple_live_app/build/dist/*/*.zip
+
+      - name: Upload to Release
+        if: ${{ steps.build_macos.outcome == 'success' && needs.resolve.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag_name }}
+          prerelease: ${{ needs.resolve.outputs.prerelease }}
+          token: ${{ github.token }}
+          fail_on_unmatched_files: false
+          files: |
+            simple_live_app/build/dist/*/*.dmg
+            simple_live_app/build/dist/*/*.zip
+
+  # ── Windows ──
+  windows:
+    needs: resolve
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.x"
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install flutter_distributor
+        run: dart pub global activate flutter_distributor
+
+      - name: Build Windows
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform windows --targets zip --skip-clean
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            simple_live_app/build/dist/*/*.zip
+
+      - name: Upload to Release
+        if: ${{ needs.resolve.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag_name }}
+          prerelease: ${{ needs.resolve.outputs.prerelease }}
+          token: ${{ github.token }}
+          files: |
+            simple_live_app/build/dist/*/*.zip
+
+  # ── Linux ──
+  linux:
+    needs: resolve
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.x"
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev libmpv-dev mpv
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install flutter_distributor
+        run: dart pub global activate flutter_distributor
+
+      - name: Build Linux
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform linux --targets deb,zip --skip-clean
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            simple_live_app/build/dist/*/*.deb
+            simple_live_app/build/dist/*/*.zip
+
+      - name: Upload to Release
+        if: ${{ needs.resolve.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag_name }}
+          prerelease: ${{ needs.resolve.outputs.prerelease }}
+          token: ${{ github.token }}
+          files: |
+            simple_live_app/build/dist/*/*.deb
+            simple_live_app/build/dist/*/*.zip

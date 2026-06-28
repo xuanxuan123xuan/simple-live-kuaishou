@@ -14,7 +14,7 @@ on:
       upload_release:
         description: "Upload build outputs to the matching GitHub Release when ref is a tag"
         required: false
-        default: false
+        default: true
         type: boolean
 
 jobs:

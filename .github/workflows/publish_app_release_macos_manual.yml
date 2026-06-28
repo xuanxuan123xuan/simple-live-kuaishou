@@ -10,7 +10,7 @@ on:
       upload_release:
         description: "Upload build outputs to the matching GitHub Release when ref is a tag"
         required: false
-        default: false
+        default: true
         type: boolean
       build_note:
         description: "6.1 quota strategy: use GitHub Actions only for macOS/iOS; build Android/Windows/Linux/TV locally"
