@@ -1,19 +1,26 @@
+import 'dart:io';
+
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/services/kuaishou_account_service.dart';
-import 'package:simple_live_core/simple_live_core.dart';
 
 class KuaishouWebLoginController extends BaseController {
   static const _loginUrl = "https://live.kuaishou.com/";
-  static const _userAgent = KuaishouSite.userAgent;
+  static const _desktopSafariUserAgent =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+      "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
+  static const _desktopChromeUserAgent =
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
   InAppWebViewController? webViewController;
   final CookieManager cookieManager = CookieManager.instance();
   final progress = 0.0.obs;
   final checking = false.obs;
+  final errorMessage = "".obs;
 
   void onWebViewCreated(InAppWebViewController controller) {
     webViewController = controller;
@@ -24,12 +31,39 @@ class KuaishouWebLoginController extends BaseController {
     progress.value = value / 100;
   }
 
-  void onLoadStop(InAppWebViewController controller, Uri? uri) async {
+  void onLoadStart(InAppWebViewController controller, Uri? uri) {
+    progress.value = 0;
+    errorMessage.value = "";
+  }
+
+  void onLoadStop(InAppWebViewController controller, Uri? uri) {
     progress.value = 1;
-    await saveCookie(silent: true, autoClose: false);
+  }
+
+  void onReceivedError(
+    InAppWebViewController controller,
+    WebResourceRequest request,
+    WebResourceError error,
+  ) {
+    if (request.isForMainFrame == true) {
+      progress.value = 1;
+      errorMessage.value = error.description;
+    }
+  }
+
+  void onReceivedHttpError(
+    InAppWebViewController controller,
+    WebResourceRequest request,
+    WebResourceResponse response,
+  ) {
+    if (request.isForMainFrame == true) {
+      progress.value = 1;
+      errorMessage.value = "HTTP " + (response.statusCode?.toString() ?? "-");
+    }
   }
 
   Future<void> reload() async {
+    errorMessage.value = "";
     await webViewController?.reload();
   }
 
@@ -42,8 +76,15 @@ class KuaishouWebLoginController extends BaseController {
     }
     checking.value = true;
     try {
-      final cookie = await _readCookie();
+      var cookie = await _readCookie();
       final localStorageKww = await _readKww();
+      if (localStorageKww.isNotEmpty &&
+          _readCookieValue(cookie, 'kwfv1').isEmpty) {
+        final encodedKww = Uri.encodeComponent(localStorageKww);
+        cookie = cookie.isEmpty
+            ? 'kwfv1=' + encodedKww
+            : cookie + '; kwfv1=' + encodedKww;
+      }
       final kww = localStorageKww.isNotEmpty
           ? localStorageKww
           : _readCookieValue(cookie, 'kwfv1');
@@ -54,6 +95,12 @@ class KuaishouWebLoginController extends BaseController {
         return;
       }
       KuaishouAccountService.instance.setCookie(cookie, kww: kww);
+      if (kww.isEmpty) {
+        if (!silent || autoClose) {
+          SmartDialog.showToast("Cookie 已保存，但未获取到 kwfv1；请刷新页面或完成验证后再保存");
+        }
+        return;
+      }
       if (!silent || autoClose) {
         SmartDialog.showToast("快手 Cookie 已保存，可用于搜索和弹幕");
       }
@@ -86,7 +133,7 @@ class KuaishouWebLoginController extends BaseController {
         }
       }
     }
-    return values.entries.map((e) => "${e.key}=${e.value}").join("; ");
+    return values.entries.map((e) => e.key + "=" + e.value).join("; ");
   }
 
   Future<String> _readKww() async {
@@ -95,6 +142,9 @@ class KuaishouWebLoginController extends BaseController {
     );
     return value?.toString().trim() ?? '';
   }
+
+  String get userAgent =>
+      Platform.isIOS ? _desktopSafariUserAgent : _desktopChromeUserAgent;
 
   String _readCookieValue(String cookie, String name) {
     for (final part in cookie.split(';')) {
@@ -105,6 +155,4 @@ class KuaishouWebLoginController extends BaseController {
     }
     return '';
   }
-
-  String get userAgent => _userAgent;
 }

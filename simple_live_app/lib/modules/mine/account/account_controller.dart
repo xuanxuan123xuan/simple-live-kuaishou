@@ -304,36 +304,25 @@ class AccountController extends GetxController {
   void doKuaishouCookieConfig() {
     final account = KuaishouAccountService.instance;
     final cookieController = TextEditingController(text: account.cookie);
-    final kwwController = TextEditingController(text: account.kww);
     Get.dialog(
       AlertDialog(
-        title: const Text("配置快手弹幕凭证"),
+        title: const Text("配置快手 Cookie"),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                "快手弹幕需要 Cookie 和网页 localStorage 的 kwfv1（请求头 Kww）。也可以直接粘贴完整 Request Headers。",
+                "只需粘贴完整 Cookie 或 Request Headers，不需要填写 Kww。应用会优先使用 Cookie 中的 kwfv1 自动生成弹幕签名。",
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: cookieController,
-                maxLines: 4,
+                maxLines: 6,
                 decoration: const InputDecoration(
                   labelText: "Cookie",
-                  hintText: "粘贴 live.kuaishou.com Cookie 或完整请求头",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: kwwController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: "Kww / kwfv1",
-                  hintText: "从 Request Headers 的 Kww 或 localStorage 的 kwfv1 获取",
+                  hintText: "粘贴 live.kuaishou.com 的完整 Cookie",
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -347,17 +336,17 @@ class AccountController extends GetxController {
               final rawInput = cookieController.text;
               final cookie = _normalizeCookieInput(rawInput);
               final pastedKww = _extractKuaishouKww(rawInput);
-              final kww = kwwController.text.trim().isNotEmpty
-                  ? kwwController.text.trim()
-                  : pastedKww;
               Get.back();
               if (cookie.isEmpty) {
                 account.clearCookie();
-                SmartDialog.showToast("已清除快手弹幕凭证");
+                SmartDialog.showToast("已清除快手 Cookie");
               } else {
-                account.setCookie(cookie, kww: kww);
+                account.setCookie(cookie, kww: pastedKww);
+                final hasKwfv1 = _parseCookieMap(cookie).containsKey("kwfv1");
                 SmartDialog.showToast(
-                  kww.isEmpty ? "Cookie 已保存，但缺少 Kww，弹幕可能不可用" : "快手弹幕凭证已保存",
+                  hasKwfv1 || pastedKww.isNotEmpty
+                      ? "快手 Cookie 已保存"
+                      : "Cookie 已保存，但缺少 kwfv1，弹幕可能需要重新网页登录",
                 );
               }
             },
@@ -365,10 +354,7 @@ class AccountController extends GetxController {
           ),
         ],
       ),
-    ).whenComplete(() {
-      cookieController.dispose();
-      kwwController.dispose();
-    });
+    ).whenComplete(cookieController.dispose);
   }
 
   void showCurrentKuaishouCookie() {
@@ -745,15 +731,8 @@ class AccountController extends GetxController {
   }
 
   String _currentKuaishouCredentialsText() {
-    final account = KuaishouAccountService.instance;
-    if (account.cookie.isEmpty) {
-      return "";
-    }
-    final lines = <String>["Cookie: ${account.cookie}"];
-    if (account.kww.isNotEmpty) {
-      lines.add("Kww: ${account.kww}");
-    }
-    return lines.join("\n");
+    final cookie = KuaishouAccountService.instance.cookie;
+    return cookie.isEmpty ? "" : "Cookie: " + cookie;
   }
 
   String _extractKuaishouKww(String input) {
