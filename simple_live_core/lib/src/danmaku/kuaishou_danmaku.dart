@@ -60,7 +60,7 @@ class KuaishouDanmaku extends LiveDanmaku {
         args.liveStreamId.isEmpty ||
         args.token.isEmpty ||
         args.websocketUrls.isEmpty) {
-      onClose?.call("快手弹幕凭证无效，请在账号设置中重新登录并完成验证");
+      onClose?.call("暂时未获取到快手弹幕连接信息，可能是请求受限；请稍后刷新，持续失败时再重新登录");
       return;
     }
 

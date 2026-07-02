@@ -750,7 +750,7 @@ class AccountController extends GetxController {
     }
     final remain = expiry.difference(DateTime.now());
     if (remain.isNegative) {
-      return "已配置 Cookie（${cookie.length} 字符），预计有效期已过";
+      return "已配置 Cookie（${cookie.length} 字符），本地到期记录已过；服务端续期后仍可能可用";
     }
     return "已配置 Cookie（${cookie.length} 字符），预计剩余 ${_formatDurationShort(remain)}";
   }

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -9,22 +7,21 @@ import 'package:simple_live_app/services/kuaishou_account_service.dart';
 
 class KuaishouWebLoginController extends BaseController {
   static const _loginUrl = "https://live.kuaishou.com/";
-  static const _desktopSafariUserAgent =
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-      "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
-  static const _desktopChromeUserAgent =
-      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  static const _reloadCooldown = Duration(seconds: 10);
+  static const _rateLimitCooldown = Duration(minutes: 2);
 
+  WebUri get loginUri => WebUri(_loginUrl);
   InAppWebViewController? webViewController;
   final CookieManager cookieManager = CookieManager.instance();
   final progress = 0.0.obs;
   final checking = false.obs;
   final errorMessage = "".obs;
+  DateTime? _lastNavigationAt;
+  DateTime? _rateLimitedUntil;
 
   void onWebViewCreated(InAppWebViewController controller) {
     webViewController = controller;
-    controller.loadUrl(urlRequest: URLRequest(url: WebUri(_loginUrl)));
+    _lastNavigationAt = DateTime.now();
   }
 
   void onProgressChanged(InAppWebViewController controller, int value) {
@@ -36,8 +33,23 @@ class KuaishouWebLoginController extends BaseController {
     errorMessage.value = "";
   }
 
-  void onLoadStop(InAppWebViewController controller, Uri? uri) {
+  Future<void> onLoadStop(
+    InAppWebViewController controller,
+    Uri? uri,
+  ) async {
     progress.value = 1;
+    try {
+      final bodyText = await controller.evaluateJavascript(
+        source: "document.body ? document.body.innerText : ''",
+      );
+      final text = bodyText?.toString() ?? "";
+      if (text.contains("请求频率太快") || text.contains("操作过于频繁")) {
+        _rateLimitedUntil = DateTime.now().add(_rateLimitCooldown);
+        errorMessage.value = "快手限制了当前登录请求，请等待约 2 分钟后再重试";
+      } else {
+        _rateLimitedUntil = null;
+      }
+    } catch (_) {}
   }
 
   void onReceivedError(
@@ -63,6 +75,20 @@ class KuaishouWebLoginController extends BaseController {
   }
 
   Future<void> reload() async {
+    final now = DateTime.now();
+    final rateLimitedUntil = _rateLimitedUntil;
+    if (rateLimitedUntil != null && rateLimitedUntil.isAfter(now)) {
+      final seconds = rateLimitedUntil.difference(now).inSeconds + 1;
+      SmartDialog.showToast("请求过于频繁，请等待 $seconds 秒后重试");
+      return;
+    }
+    final lastNavigationAt = _lastNavigationAt;
+    if (lastNavigationAt != null &&
+        now.difference(lastNavigationAt) < _reloadCooldown) {
+      SmartDialog.showToast("页面刚刚加载，请勿连续刷新");
+      return;
+    }
+    _lastNavigationAt = now;
     errorMessage.value = "";
     await webViewController?.reload();
   }
@@ -167,9 +193,6 @@ class KuaishouWebLoginController extends BaseController {
     );
     return value?.toString().trim() ?? '';
   }
-
-  String get userAgent =>
-      Platform.isIOS ? _desktopSafariUserAgent : _desktopChromeUserAgent;
 
   String _readCookieValue(String cookie, String name) {
     for (final part in cookie.split(';')) {

@@ -41,6 +41,35 @@ class KuaishouAccountService extends GetxService {
       site.customKww = kww;
       site.cookie = "";
       site.cookieObj = {};
+      site.onCookieUpdated = updateCookieFromSite;
+    }
+  }
+
+  void updateCookieFromSite(
+    String refreshedCookie,
+    DateTime? expiresAt,
+  ) {
+    if (cookie.isEmpty ||
+        refreshedCookie.isEmpty ||
+        refreshedCookie == cookie) {
+      return;
+    }
+    cookie = refreshedCookie;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kKuaishouCookie,
+      cookie,
+    );
+    hasCookie.value = true;
+    if (expiresAt != null) {
+      cookieExpiresAtMs.value = expiresAt.millisecondsSinceEpoch;
+      LocalStorageService.instance.setValue(
+        LocalStorageService.kKuaishouCookieExpiresAt,
+        cookieExpiresAtMs.value,
+      );
+    }
+    final site = Sites.allSites[Constant.kKuaishou]?.liveSite;
+    if (site is KuaishouSite) {
+      site.customCookie = cookie;
     }
   }
 
