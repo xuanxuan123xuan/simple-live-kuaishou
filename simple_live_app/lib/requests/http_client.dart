@@ -211,6 +211,8 @@ class HttpClient {
         return "$method发送超时，配置包可能较大或对方设备响应太慢";
       case DioExceptionType.receiveTimeout:
         return "$method接收超时，对方设备可能卡住或网络不稳定";
+      case DioExceptionType.transformTimeout:
+        return "$method响应处理超时，请稍后重试";
       case DioExceptionType.connectionError:
         return "$method连接失败，请确认对方设备已打开局域网同步";
       case DioExceptionType.cancel:

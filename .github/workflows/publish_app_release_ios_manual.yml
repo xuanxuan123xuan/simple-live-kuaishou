@@ -91,7 +91,7 @@ jobs:
 
       - name: Upload Release
         if: ${{ inputs.upload_release && steps.ref_info.outputs.is_tag == 'true' }}
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.ref_info.outputs.ref_name }}
           name: ${{ steps.ref_info.outputs.ref_name }}

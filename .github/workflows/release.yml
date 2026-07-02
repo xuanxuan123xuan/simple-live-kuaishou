@@ -23,6 +23,10 @@ jobs:
       is_tag: ${{ steps.resolve.outputs.is_tag }}
       prerelease: ${{ steps.resolve.outputs.prerelease }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || inputs.ref || 'main' }}
+
       - id: resolve
         shell: bash
         run: |
@@ -33,7 +37,11 @@ jobs:
             if [[ -z "$ref" ]]; then
               ref="refs/heads/main"
             elif [[ "$ref" != refs/* ]]; then
-              ref="refs/tags/$ref"
+              if [[ "$ref" == v* ]]; then
+                ref="refs/tags/$ref"
+              else
+                ref="refs/heads/$ref"
+              fi
             fi
           fi
 
@@ -44,6 +52,10 @@ jobs:
           is_tag="false"
           prerelease="false"
           if [[ "$ref" == refs/tags/v* ]]; then
+            is_tag="true"
+          else
+            app_version="$(awk '/^version:/ {print $2}' simple_live_app/pubspec.yaml)"
+            tag_name="v${app_version%%+*}"
             is_tag="true"
           fi
           if [[ "$tag_name" == *beta* || "$tag_name" == *alpha* || "$tag_name" == *pre* || "$tag_name" == *rc* ]]; then
@@ -120,7 +132,7 @@ jobs:
 
       - name: Upload to Release
         if: ${{ needs.resolve.outputs.is_tag == 'true' }}
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.resolve.outputs.tag_name }}
           prerelease: ${{ needs.resolve.outputs.prerelease }}
@@ -173,7 +185,7 @@ jobs:
 
       - name: Upload to Release
         if: ${{ needs.resolve.outputs.is_tag == 'true' }}
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.resolve.outputs.tag_name }}
           prerelease: ${{ needs.resolve.outputs.prerelease }}
@@ -227,7 +239,7 @@ jobs:
 
       - name: Upload to Release
         if: ${{ steps.build_macos.outcome == 'success' && needs.resolve.outputs.is_tag == 'true' }}
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.resolve.outputs.tag_name }}
           prerelease: ${{ needs.resolve.outputs.prerelease }}
@@ -275,7 +287,7 @@ jobs:
 
       - name: Upload to Release
         if: ${{ needs.resolve.outputs.is_tag == 'true' }}
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.resolve.outputs.tag_name }}
           prerelease: ${{ needs.resolve.outputs.prerelease }}
@@ -327,7 +339,7 @@ jobs:
 
       - name: Upload to Release
         if: ${{ needs.resolve.outputs.is_tag == 'true' }}
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.resolve.outputs.tag_name }}
           prerelease: ${{ needs.resolve.outputs.prerelease }}
