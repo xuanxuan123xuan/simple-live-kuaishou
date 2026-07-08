@@ -1,0 +1,14 @@
+name: media_kit_video
+description: OHOS compatibility shim for Simple Live. Not a full media_kit_video implementation.
+version: 2.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.0.5 <4.0.0"
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+  media_kit:
+    path: ../media_kit

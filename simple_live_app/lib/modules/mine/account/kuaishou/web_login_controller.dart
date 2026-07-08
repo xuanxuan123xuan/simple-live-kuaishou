@@ -9,8 +9,13 @@ class KuaishouWebLoginController extends BaseController {
   static const _loginUrl = "https://live.kuaishou.com/";
   static const _reloadCooldown = Duration(seconds: 10);
   static const _rateLimitCooldown = Duration(minutes: 2);
+  static const _userAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0";
 
   WebUri get loginUri => WebUri(_loginUrl);
+  String get userAgent => _userAgent;
+
   InAppWebViewController? webViewController;
   final CookieManager cookieManager = CookieManager.instance();
   final progress = 0.0.obs;
@@ -43,7 +48,7 @@ class KuaishouWebLoginController extends BaseController {
         source: "document.body ? document.body.innerText : ''",
       );
       final text = bodyText?.toString() ?? "";
-      if (text.contains("请求频率太快") || text.contains("操作过于频繁")) {
+      if (_isRateLimitedText(text)) {
         _rateLimitedUntil = DateTime.now().add(_rateLimitCooldown);
         errorMessage.value = "快手限制了当前登录请求，请等待约 2 分钟后再重试";
       } else {
@@ -192,6 +197,14 @@ class KuaishouWebLoginController extends BaseController {
       source: "window.localStorage.getItem('kwfv1') || ''",
     );
     return value?.toString().trim() ?? '';
+  }
+
+  bool _isRateLimitedText(String text) {
+    return text.contains("请求频率太快") ||
+        text.contains("操作过于频繁") ||
+        text.contains("请求过于频繁") ||
+        text.contains("璇锋眰棰戠巼澶揩") ||
+        text.contains("鎿嶄綔杩囦簬棰戠箒");
   }
 
   String _readCookieValue(String cookie, String name) {

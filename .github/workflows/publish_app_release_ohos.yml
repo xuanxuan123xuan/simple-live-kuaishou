@@ -1,0 +1,153 @@
+name: app-build-ohos-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_ohos:
+        description: "Build OpenHarmony/HarmonyOS HAP"
+        type: boolean
+        default: true
+      ref:
+        description: "Git ref to build (tag like v1.0.0, or branch like main)"
+        required: false
+        default: ""
+      upload_release:
+        description: "Upload HAP to GitHub Release when ref is a tag"
+        type: boolean
+        default: false
+      flutter_ohos_repo:
+        description: "Flutter OHOS TPC repository URL"
+        required: false
+        default: "https://gitee.com/openharmony-sig/flutter_flutter.git"
+      flutter_ohos_ref:
+        description: "Flutter OHOS branch/tag/commit. Empty uses repo default branch."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-ohos:
+    if: ${{ inputs.build_ohos == true }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Resolve ref
+        id: ref_info
+        shell: bash
+        run: |
+          ref="${{ inputs.ref }}"
+          if [[ -z "$ref" ]]; then
+            ref="${{ github.ref }}"
+          fi
+          if [[ -z "$ref" || "$ref" == "refs/heads/" ]]; then
+            ref="refs/heads/main"
+          elif [[ "$ref" != refs/* ]]; then
+            if [[ "$ref" == v* ]]; then
+              ref="refs/tags/$ref"
+            else
+              ref="refs/heads/$ref"
+            fi
+          fi
+          ref_name="$ref"
+          ref_name="${ref_name#refs/tags/}"
+          ref_name="${ref_name#refs/heads/}"
+          is_tag="false"
+          if [[ "$ref" == refs/tags/v* ]]; then
+            is_tag="true"
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "ref_name=$ref_name" >> "$GITHUB_OUTPUT"
+          echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref_info.outputs.ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: ./.github/actions/setup-flutter-ohos
+        with:
+          flutter-ohos-repo: ${{ inputs.flutter_ohos_repo }}
+          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref }}
+          ohos-sdk-url: ${{ secrets.OHOS_SDK_URL || vars.OHOS_SDK_URL }}
+          pub-hosted-url: ${{ vars.PUB_HOSTED_URL }}
+          flutter-storage-base-url: ${{ vars.FLUTTER_STORAGE_BASE_URL }}
+
+      - name: Prepare OHOS pubspec
+        shell: bash
+        run: |
+          cp simple_live_app/pubspec.yaml simple_live_app/pubspec.default.yaml
+          cp simple_live_app/pubspec.ohos.yaml simple_live_app/pubspec.yaml
+          rm -f simple_live_app/pubspec.lock
+
+      - name: Restore packages
+        shell: bash
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Build OHOS HAP
+        shell: bash
+        run: |
+          cd simple_live_app
+          if flutter build hap --help >/dev/null 2>&1; then
+            flutter build hap --release --dart-define=TARGET_OHOS=true
+          else
+            echo "Current Flutter OHOS SDK does not expose 'flutter build hap'; falling back to hvigor." >&2
+            cd ohos
+            if command -v ohpm >/dev/null 2>&1; then
+              ohpm install
+            fi
+            if [[ -x ./hvigorw ]]; then
+              ./hvigorw assembleHap --mode module -p module=entry@default -p product=default
+            else
+              hvigorw assembleHap --mode module -p module=entry@default -p product=default
+            fi
+          fi
+
+      - name: Collect HAP assets
+        id: hap_assets
+        shell: bash
+        run: |
+          app_version="$(awk '/^version:/ {print $2}' simple_live_app/pubspec.ohos.yaml)"
+          out_dir="simple_live_app/build/ohos-artifacts"
+          mkdir -p "$out_dir"
+          mapfile -t haps < <(find simple_live_app -type f -name "*.hap" | sort)
+          if [[ "${#haps[@]}" -eq 0 ]]; then
+            echo "No .hap files found after OHOS build." >&2
+            exit 1
+          fi
+          index=1
+          for hap in "${haps[@]}"; do
+            suffix=""
+            if [[ "${#haps[@]}" -gt 1 ]]; then
+              suffix="-$index"
+            fi
+            cp "$hap" "$out_dir/simple_live_app-${app_version}-ohos${suffix}.hap"
+            index=$((index + 1))
+          done
+          echo "path=$out_dir/*.hap" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ohos
+          path: ${{ steps.hap_assets.outputs.path }}
+
+      - name: Upload to Release
+        if: ${{ inputs.upload_release && steps.ref_info.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ref_info.outputs.ref_name }}
+          token: ${{ github.token }}
+          generate_release_notes: true
+          prerelease: ${{ contains(steps.ref_info.outputs.ref_name, 'beta') || contains(steps.ref_info.outputs.ref_name, 'alpha') || contains(steps.ref_info.outputs.ref_name, 'pre') || contains(steps.ref_info.outputs.ref_name, 'next') || contains(steps.ref_info.outputs.ref_name, 'local') }}
+          fail_on_unmatched_files: false
+          files: ${{ steps.hap_assets.outputs.path }}

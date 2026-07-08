@@ -10,6 +10,18 @@ on:
         description: "Git ref to build (tag like v1.0.0, or branch like main)"
         required: false
         default: ""
+      build_ohos:
+        description: "Build OpenHarmony/HarmonyOS HAP"
+        type: boolean
+        default: true
+      flutter_ohos_repo:
+        description: "Flutter OHOS TPC repository URL"
+        required: false
+        default: "https://gitee.com/openharmony-sig/flutter_flutter.git"
+      flutter_ohos_ref:
+        description: "Flutter OHOS branch/tag/commit. Empty uses repo default branch."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -347,3 +359,100 @@ jobs:
           files: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
+
+  # ---- OpenHarmony / HarmonyOS NEXT ----
+  ohos:
+    needs: resolve
+    if: ${{ github.event_name == 'push' || inputs.build_ohos == true }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: ./.github/actions/setup-flutter-ohos
+        with:
+          flutter-ohos-repo: ${{ inputs.flutter_ohos_repo || vars.FLUTTER_OHOS_REPO || 'https://gitee.com/openharmony-sig/flutter_flutter.git' }}
+          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref || vars.FLUTTER_OHOS_REF }}
+          ohos-sdk-url: ${{ secrets.OHOS_SDK_URL || vars.OHOS_SDK_URL }}
+          pub-hosted-url: ${{ vars.PUB_HOSTED_URL }}
+          flutter-storage-base-url: ${{ vars.FLUTTER_STORAGE_BASE_URL }}
+
+      - name: Prepare OHOS pubspec
+        shell: bash
+        run: |
+          cp simple_live_app/pubspec.yaml simple_live_app/pubspec.default.yaml
+          cp simple_live_app/pubspec.ohos.yaml simple_live_app/pubspec.yaml
+          rm -f simple_live_app/pubspec.lock
+
+      - name: Restore packages
+        shell: bash
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Build OHOS HAP
+        shell: bash
+        run: |
+          cd simple_live_app
+          if flutter build hap --help >/dev/null 2>&1; then
+            flutter build hap --release --dart-define=TARGET_OHOS=true
+          else
+            echo "Current Flutter OHOS SDK does not expose 'flutter build hap'; falling back to hvigor." >&2
+            cd ohos
+            if command -v ohpm >/dev/null 2>&1; then
+              ohpm install
+            fi
+            if [[ -x ./hvigorw ]]; then
+              ./hvigorw assembleHap --mode module -p module=entry@default -p product=default
+            else
+              hvigorw assembleHap --mode module -p module=entry@default -p product=default
+            fi
+          fi
+
+      - name: Collect HAP assets
+        id: hap_assets
+        shell: bash
+        run: |
+          app_version="$(awk '/^version:/ {print $2}' simple_live_app/pubspec.ohos.yaml)"
+          out_dir="simple_live_app/build/ohos-artifacts"
+          mkdir -p "$out_dir"
+          mapfile -t haps < <(find simple_live_app -type f -name "*.hap" | sort)
+          if [[ "${#haps[@]}" -eq 0 ]]; then
+            echo "No .hap files found after OHOS build." >&2
+            exit 1
+          fi
+          index=1
+          for hap in "${haps[@]}"; do
+            suffix=""
+            if [[ "${#haps[@]}" -gt 1 ]]; then
+              suffix="-$index"
+            fi
+            cp "$hap" "$out_dir/simple_live_app-${app_version}-ohos${suffix}.hap"
+            index=$((index + 1))
+          done
+          echo "path=$out_dir/*.hap" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ohos
+          path: ${{ steps.hap_assets.outputs.path }}
+
+      - name: Upload to Release
+        if: ${{ needs.resolve.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag_name }}
+          prerelease: ${{ needs.resolve.outputs.prerelease }}
+          token: ${{ github.token }}
+          fail_on_unmatched_files: false
+          files: ${{ steps.hap_assets.outputs.path }}

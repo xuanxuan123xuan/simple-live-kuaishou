@@ -66,9 +66,8 @@ mixin PlayerMixin {
   /// 初始化播放器并设置 ao 参数
   Future<void> initializePlayer() async {
     await MpvOptionsService.applyToPlayer(player);
-    var pp = player.platform as NativePlayer;
-    // 设置音频输出驱动
-    if (AppSettingsController.instance.customPlayerOutput.value) {
+    final isOhos = Platform.operatingSystem == 'ohos';
+    if (!isOhos && AppSettingsController.instance.customPlayerOutput.value) {
       if (player.platform is NativePlayer) {
         await (player.platform as dynamic).setProperty(
           'ao',
@@ -76,13 +75,15 @@ mixin PlayerMixin {
         );
       }
     }
-    // media_kit 仓库更新导致的问题，临时解决办法
-    if (Platform.isAndroid) {
-      await pp.setProperty('force-seekable', 'yes');
+    if (!isOhos && Platform.isAndroid && player.platform is NativePlayer) {
+      await (player.platform as NativePlayer).setProperty(
+        'force-seekable',
+        'yes',
+      );
     }
   }
 
-  /// 视频控制器
+  /// 瑙嗛鎺у埗鍣?
   late final videoController = VideoController(
     player,
     configuration: MpvOptionsService.videoControllerConfiguration(),

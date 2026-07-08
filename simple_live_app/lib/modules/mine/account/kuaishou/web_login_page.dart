@@ -72,15 +72,24 @@ class KuaishouWebLoginPage extends GetView<KuaishouWebLoginController> {
               onReceivedError: controller.onReceivedError,
               onReceivedHttpError: controller.onReceivedHttpError,
               initialSettings: InAppWebViewSettings(
+                userAgent: controller.userAgent,
                 preferredContentMode: UserPreferredContentMode.DESKTOP,
+                useShouldOverrideUrlLoading: true,
                 javaScriptEnabled: true,
                 domStorageEnabled: true,
                 databaseEnabled: true,
                 sharedCookiesEnabled: true,
                 thirdPartyCookiesEnabled: true,
                 javaScriptCanOpenWindowsAutomatically: true,
-                supportMultipleWindows: false,
+                supportMultipleWindows: true,
               ),
+              onCreateWindow: (webController, createWindowAction) async {
+                final url = createWindowAction.request.url;
+                if (url != null) {
+                  await webController.loadUrl(urlRequest: URLRequest(url: url));
+                }
+                return false;
+              },
             ),
           ),
         ],

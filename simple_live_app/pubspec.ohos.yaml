@@ -1,0 +1,99 @@
+name: simple_live_app
+version: 1.12.6+11206
+publish_to: none
+description: "Simple Live APP for OpenHarmony NEXT"
+
+environment:
+  sdk: ">=3.0.5 <4.0.0"
+
+dependencies:
+  simple_live_core:
+    path: ../simple_live_core
+  dart_quickjs:
+    git:
+      url: https://github.com/xiaoyaocz/dart_quickjs
+  cupertino_icons: ^1.0.8
+  remixicon: ^1.4.1
+  get: ^4.7.3
+  dio: ^5.9.0
+  hive: 2.2.3
+  hive_flutter: 1.1.0
+  logger: ^2.6.2
+  intl: ^0.20.2
+  qr_flutter: ^4.1.0
+  dynamic_color: ^1.8.1
+  path: any
+  collection: any
+  udp: ^5.0.3
+  uuid: ^4.5.2
+  webdav_client: ^1.2.2
+  archive: ^4.0.7
+  crypto: ^3.0.7
+  flutter_staggered_grid_view: ^0.7.0
+  flutter_easyrefresh: 2.2.2
+  extended_image: ^10.0.1
+  flutter_smart_dialog: ^4.9.8+9
+  sticky_headers: ^0.3.0+2
+  lottie: ^3.3.2
+  canvas_danmaku: ^0.2.7
+  package_info_plus: ^9.0.0
+  device_info_plus: 12.2.0
+  url_launcher: ^6.3.2
+  share_plus: ^12.0.1
+  path_provider: ^2.1.5
+  cross_file: ^0.3.5
+  permission_handler: ^12.0.1
+  image_gallery_saver_plus: ^4.0.1
+  screen_brightness: ^2.1.7
+  auto_orientation_v2: ^2.3.6
+  wakelock_plus: ^1.4.0
+  file_picker: ^10.3.7
+  window_manager: ^0.5.1
+  screen_retriever: ^0.2.0
+  floating: ^6.0.0
+  flutter_inappwebview: ^6.1.5
+  connectivity_plus: 7.0.0
+  qr_code_scanner_plus: ^2.0.14
+  volume_controller: ^3.4.0
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  network_info_plus: ^7.0.0
+  web_socket_channel: ^3.0.1
+
+  # OHOS uses local compatibility shims backed by ArkUI PlatformView + AVPlayer.
+  media_kit:
+    path: ../third_party/ohos_media_kit_compat/media_kit
+  media_kit_video:
+    path: ../third_party/ohos_media_kit_compat/media_kit_video
+
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  sherpa_onnx: ^1.13.2
+
+# OHOS NEXT 原生播放版必须移除：
+# - media_kit_libs_video
+# media_kit / media_kit_video are replaced by local OHOS shims above.
+# - video_player / chewie（如果后续引入，也不要加回）
+
+dev_dependencies:
+  flutter_lints: ^2.0.0
+  build_runner: ^2.3.3
+  hive_generator: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_test:
+    sdk: flutter
+
+dependency_overrides:
+  canvas_danmaku:
+    path: ../third_party/canvas_danmaku
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/statement.txt
+    - assets/images/
+    - assets/images/douyin_emoji/
+    - assets/icons/
+    - assets/lotties/

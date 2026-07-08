@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "app_name", "value": "Simple Live" },
+    { "name": "module_desc", "value": "Simple Live OHOS" },
+    { "name": "EntryAbility_desc", "value": "Simple Live Entry Ability" }
+  ]
+}

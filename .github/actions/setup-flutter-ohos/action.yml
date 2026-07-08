@@ -1,0 +1,87 @@
+name: Setup Flutter OHOS
+description: Set up Flutter OHOS TPC branch and OpenHarmony/HarmonyOS SDK for HAP builds.
+inputs:
+  flutter-ohos-repo:
+    description: Flutter OHOS TPC repository URL.
+    required: false
+    default: https://gitee.com/openharmony-sig/flutter_flutter.git
+  flutter-ohos-ref:
+    description: Optional Flutter OHOS branch, tag or commit. Empty means repository default branch.
+    required: false
+    default: ""
+  ohos-sdk-url:
+    description: URL to a zipped OpenHarmony/HarmonyOS command-line SDK. Use secrets.OHOS_SDK_URL or vars.OHOS_SDK_URL.
+    required: false
+    default: ""
+  pub-hosted-url:
+    description: Optional PUB_HOSTED_URL mirror.
+    required: false
+    default: ""
+  flutter-storage-base-url:
+    description: Optional FLUTTER_STORAGE_BASE_URL mirror.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Install host dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl unzip git xz-utils zip libglu1-mesa
+
+    - name: Configure mirrors
+      shell: bash
+      env:
+        PUB_HOSTED_URL_INPUT: ${{ inputs.pub-hosted-url }}
+        FLUTTER_STORAGE_BASE_URL_INPUT: ${{ inputs.flutter-storage-base-url }}
+      run: |
+        if [[ -n "$PUB_HOSTED_URL_INPUT" ]]; then
+          echo "PUB_HOSTED_URL=$PUB_HOSTED_URL_INPUT" >> "$GITHUB_ENV"
+        fi
+        if [[ -n "$FLUTTER_STORAGE_BASE_URL_INPUT" ]]; then
+          echo "FLUTTER_STORAGE_BASE_URL=$FLUTTER_STORAGE_BASE_URL_INPUT" >> "$GITHUB_ENV"
+        fi
+
+    - name: Install OHOS SDK
+      shell: bash
+      env:
+        OHOS_SDK_URL_INPUT: ${{ inputs.ohos-sdk-url }}
+      run: |
+        if [[ -z "$OHOS_SDK_URL_INPUT" ]]; then
+          echo "OHOS SDK is not bundled on GitHub runners." >&2
+          echo "Set repository secret or variable OHOS_SDK_URL to a zipped OpenHarmony/HarmonyOS command-line SDK." >&2
+          exit 1
+        fi
+        sdk_root="$RUNNER_TEMP/ohos-sdk"
+        mkdir -p "$sdk_root"
+        curl -fL --retry 3 "$OHOS_SDK_URL_INPUT" -o "$RUNNER_TEMP/ohos-sdk.zip"
+        unzip -q "$RUNNER_TEMP/ohos-sdk.zip" -d "$sdk_root"
+        echo "OHOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
+        echo "HOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
+        echo "DEVECO_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
+        find "$sdk_root" -type d \( -name bin -o -name toolchains \) | while read -r dir; do
+          echo "$dir" >> "$GITHUB_PATH"
+        done
+
+    - name: Install Flutter OHOS
+      shell: bash
+      env:
+        FLUTTER_OHOS_REPO: ${{ inputs.flutter-ohos-repo }}
+        FLUTTER_OHOS_REF: ${{ inputs.flutter-ohos-ref }}
+      run: |
+        flutter_root="$RUNNER_TEMP/flutter-ohos"
+        if [[ -n "$FLUTTER_OHOS_REF" ]]; then
+          git clone --depth 1 --branch "$FLUTTER_OHOS_REF" "$FLUTTER_OHOS_REPO" "$flutter_root"
+        else
+          git clone --depth 1 "$FLUTTER_OHOS_REPO" "$flutter_root"
+        fi
+        echo "$flutter_root/bin" >> "$GITHUB_PATH"
+        echo "FLUTTER_ROOT=$flutter_root" >> "$GITHUB_ENV"
+
+    - name: Warm up Flutter OHOS
+      shell: bash
+      run: |
+        flutter --version
+        flutter config --enable-ohos || true
+        flutter doctor -v || true
