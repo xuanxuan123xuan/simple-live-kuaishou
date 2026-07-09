@@ -99,7 +99,15 @@ jobs:
         run: |
           cd simple_live_app
           if flutter build hap --help >/dev/null 2>&1; then
-            flutter build hap --release --dart-define=TARGET_OHOS=true
+            hap_help="$(flutter build hap --help 2>&1 || true)"
+            hap_args=()
+            if grep -q -- "--release" <<< "$hap_help"; then
+              hap_args+=(--release)
+            fi
+            if grep -q -- "--dart-define" <<< "$hap_help"; then
+              hap_args+=(--dart-define=TARGET_OHOS=true)
+            fi
+            flutter build hap "${hap_args[@]}"
           else
             echo "Current Flutter OHOS SDK does not expose 'flutter build hap'; falling back to hvigor." >&2
             cd ohos
