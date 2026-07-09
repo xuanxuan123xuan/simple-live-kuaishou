@@ -1,5 +1,7 @@
 ## 未发布
 
+- 降低 simple_live_core SDK 下限到 Dart 3.0.5，兼容 Flutter OHOS Dart 3.4 解析。
+
 - 修复鸿蒙 pubspec.ohos.yaml 重复 dependency_overrides 导致的 pub get 解析失败。
 
 - 鸿蒙构建使用本地 dart_quickjs shim，避开上游 git 包 Dart 3.10 SDK 约束。
