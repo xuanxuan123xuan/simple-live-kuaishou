@@ -88,7 +88,7 @@ OHOS_SDK_URL = 可直接下载的 OpenHarmony/HarmonyOS command-line SDK archive
 https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.aa https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.ab
 ```
 
-workflow 会额外下载公开的 `oh-command-line-tools-20240715.zip` 以提供 `ohpm`，自动探测 SDK 解压后的真实 `HOS_SDK_HOME`，再由 `ohpm install` 安装 OHOS 工程里的 hvigor 依赖。
+workflow 会额外下载公开的 `oh-command-line-tools-20240715.zip` 以提供 `ohpm`，并会展开 OpenHarmony Public SDK 里的组件 zip、补齐 Flutter OHOS 识别所需的 `sdk-pkg.json`、自动探测真实 `HOS_SDK_HOME`，再由 `ohpm install` 安装 OHOS 工程里的 hvigor 依赖。
 
 Flutter OHOS TPC 工具链默认使用 GitCode 源：
 

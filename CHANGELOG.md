@@ -4,6 +4,8 @@
 
 - 鸿蒙 setup action 自动从 `sdk-pkg.json` 探测真实 `HOS_SDK_HOME`，并写入 `flutter config --ohos-sdk`，修复 SDK 解压外层目录导致的 `No Hmos SDK found`。
 
+- 鸿蒙 setup action 自动展开 OpenHarmony Public SDK 的组件 zip，并按 API 目录补齐 `sdk-pkg.json`，让 Flutter OHOS 可识别公开 SDK 镜像。
+
 - 鸿蒙 workflow 默认 Flutter OHOS 分支从 `dev` 改为 `master`，避免 `dev` 分支 Dart 2.19 与项目 Dart 3 约束冲突。
 
 - 鸿蒙 workflow 默认 Flutter OHOS 分支改为 `dev`，避免 `3.22.1-ohos-0.1.0` 实际不包含 OHOS tool 导致构建命令缺失。
