@@ -1,89 +1,125 @@
-# Simple Live + 快手
+# Simple Live
 
-跨平台聚合直播客户端，基于 Simple Live 持续维护，在哔哩哔哩、斗鱼、虎牙、抖音之外补充了完整的快手直播支持。
+Simple Live 是一个跨平台聚合直播客户端，目标是用统一体验观看多个直播平台：浏览、搜索、播放、弹幕、关注、历史、多开和设置同步尽量集中到一个应用里。
+
+本仓库基于上游 Simple Live 持续维护，当前重点维护 `simple_live_app`，同时保留 `simple_live_core`、控制台调试工具和 TV 端代码。TV 版不是当前主要适配目标。
 
 ## 功能概览
 
-- 五平台直播浏览、搜索、播放与弹幕
-- 快手分类、推荐、主播搜索、直播间搜索和多清晰度播放
-- 快手 Web 登录、手动 Cookie 导入及 `kwfv1`/Kww 自动处理
-- 快手 protobuf WebSocket 弹幕、心跳、gzip 解压和备用线路重连
-- Cookie 到期时间提示、服务器 Cookie 自动刷新合并
-- 直播状态多源容错，降低“正在直播却显示未开播”的误判
-- 弹幕屏蔽、去重、重点动态聚合和全屏重点动态提示
-- Android、iOS、Windows GitHub Actions 构建
+- 多平台直播浏览、搜索、播放与弹幕。
+- 直播分类、推荐、主播搜索、直播间搜索和多清晰度线路切换。
+- 关注列表、标签分组、开播状态刷新、观看历史和导入导出。
+- 播放页支持弹幕、全屏、手势控制、音量/亮度调节、小窗播放、播放信息查看和直播间设置。
+- 弹幕支持关键词屏蔽、用户屏蔽、重复弹幕去重、重点动态聚合和全屏重点动态提示。
+- 账号管理支持哔哩哔哩、抖音、快手等平台的 Cookie / Web 登录能力。
+- 数据同步支持本地同步、远程同步、WebDAV 和配置备份恢复。
+- 构建工作流覆盖 Android、iOS、Windows、macOS、Linux，并新增 OpenHarmony / HarmonyOS NEXT HAP 构建骨架。
 
-## 平台支持
+## 直播平台支持
 
-| 平台 | 直播 | 弹幕 | 搜索 | 分类/推荐 |
-| --- | --- | --- | --- | --- |
-| 哔哩哔哩 | ✅ | ✅ | ✅ | ✅ |
-| 斗鱼 | ✅ | ✅ | ✅ | ✅ |
-| 虎牙 | ✅ | ✅ | ✅ | ✅ |
-| 抖音 | ✅ | ✅ | ✅ | ✅ |
-| 快手 | ✅ | ✅ | ✅ | ✅ |
+| 平台 | 浏览/推荐 | 搜索 | 播放 | 弹幕 | 账号/Cookie |
+| --- | --- | --- | --- | --- | --- |
+| 哔哩哔哩直播 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 斗鱼直播 | ✅ | ✅ | ✅ | ✅ | - |
+| 虎牙直播 | ✅ | ✅ | ✅ | ✅ | - |
+| 抖音直播 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 快手直播 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-## 快手支持
+> 各直播平台页面结构、接口策略和风控规则可能随时变化。若出现搜索失败、Cookie 失效、直播状态误判或弹幕异常，通常需要按平台单独适配。
 
-### 浏览与播放
+## 应用能力
 
-- 动态获取直播分类和推荐列表
-- 搜索直播间与主播
-- 从直播页解析播放信息和清晰度列表
-- 支持 H.264 多码率播放地址
-- 列表与搜索优先使用直播 `caption`，详情字段缺失时按可用信息回退
-- 登录 Cookie 会话优先、匿名详情回退
-- 当状态字段失真时，使用直播流 ID 与有效播放地址辅助判断开播状态
+### 直播与播放
 
-### 弹幕
+- 首页聚合展示多平台分类、推荐和关注状态。
+- 直播间支持清晰度、线路、播放比例、硬解偏好、后台播放和播放信息查看。
+- 支持 Android / iOS 移动端体验，也支持 Windows / macOS / Linux 桌面端构建。
+- 桌面端支持多开窗口，多房间同屏观看。
+- 播放器保留现有 `media_kit` 播放栈；鸿蒙 NEXT 目标新增原生 ArkUI/AVPlayer 兼容方案，不影响其它平台。
 
-- 解析快手 WebSocket protobuf 数据
-- 支持评论弹幕与用户名、颜色解析
-- 支持 gzip 压缩消息
-- 支持心跳、备用 WebSocket 地址和自动重连
-- 自动携带直播间 token、stream ID、page ID、Cookie 与浏览器请求头
+### 弹幕与互动
 
-### 登录与 Cookie
+- 各平台弹幕协议在 `simple_live_core` 中统一封装。
+- 支持弹幕显示、屏蔽、去重、颜色/用户名解析和重点动态聚合。
+- 重点动态仅处理本地已收到的弹幕，不会额外请求平台接口，也不会额外消耗 Cookie。
+- 弹幕设置可按平台管理关键词、用户名和全平台规则。
 
-移动端可在“账号管理 → 快手直播”进入快手网页登录，也可以手动粘贴完整 Cookie 或 Request Headers。
+### 账号与 Cookie
 
-- Android/iOS 内置 WebView 登录入口
-- 自动读取 Cookie 与 localStorage 中的 `kwfv1`
-- 手动输入不要求额外填写 Kww
-- 展示可读取到的登录凭证预计剩余有效期
-- 服务器返回的新 Cookie 会覆盖旧值，避免短期 `web_st` 无法续期
-- 无法可靠取得到期时间时明确显示“有效期无法判断”
+- 哔哩哔哩支持 Web 登录和二维码登录。
+- 抖音支持 Web 登录、完整 Cookie 粘贴、登录态提示和有效期估算。
+- 快手支持 Web 登录、完整 Cookie / Request Headers 粘贴、文件导入、导出和有效期估算。
+- Cookie 可能因退出登录、修改密码、设备变化或平台风控提前失效，请勿公开分享 Cookie、token 或导出的账号文件。
 
-> Cookie 可能因退出登录、修改密码或平台风控提前失效。请勿公开分享 Cookie、token 或导出的账号文件。
+### 数据与同步
 
-## 弹幕增强
+- 支持关注、标签、观看历史、弹幕屏蔽词和设置项导入导出。
+- 支持局域网同步、远程同步和 WebDAV 配置备份。
+- 支持配置包备份恢复，方便多设备迁移。
 
-- 关键词和用户屏蔽
-- 重复弹幕去重
-- 重点动态：在本地统计短时间内重复出现的弹幕
-- 可配置统计跨度、起显次数、展示时间和保留数量
-- 可在全屏播放器中显示重点动态
+## OpenHarmony / HarmonyOS NEXT
 
-重点动态仅处理本地已收到的弹幕，不会额外请求平台接口，也不会消耗 Cookie。
+仓库新增了鸿蒙 NEXT 支持骨架，目标是 **不删除原有 Android/iOS/桌面播放栈**，而是为鸿蒙单独接入原生播放能力：
 
-## 下载与构建
+- Flutter 业务 UI、直播列表、路由、解析、弹幕和缓存逻辑尽量复用。
+- 鸿蒙构建使用 `simple_live_app/pubspec.ohos.yaml`，其中 `media_kit` / `media_kit_video` 指向本地兼容 shim。
+- 原生侧使用 ArkUI `XComponent`、Flutter PlatformView、MethodChannel 和 `@ohos.multimedia.media.AVPlayer`。
+- GitHub Actions 新增 `app-build-ohos-release`，中央 `release` workflow 也会尝试构建 `.hap`。
 
-仓库工作流支持以下应用构建：
+相关文件：
+
+| 路径 | 说明 |
+| --- | --- |
+| `simple_live_app/ohos` | DevEco Studio / OHOS 工程骨架 |
+| `simple_live_app/pubspec.ohos.yaml` | 鸿蒙专用依赖配置 |
+| `third_party/ohos_media_kit_compat` | 鸿蒙专用 `media_kit` 兼容 shim |
+| `.github/actions/setup-flutter-ohos` | GitHub Actions 中初始化 Flutter OHOS / OHOS SDK |
+| `.github/workflows/publish_app_release_ohos.yml` | 手动构建 `.hap` 的 workflow |
+
+GitHub 官方 runner 不内置 DevEco / OHOS SDK。若要稳定构建 `.hap`，建议在仓库 `Settings → Secrets and variables → Actions` 中配置：
+
+```text
+OHOS_SDK_URL = 可直接下载的 OpenHarmony/HarmonyOS command-line SDK zip 链接
+```
+
+未配置时 workflow 会尝试 Flutter OHOS / hvigor 默认工具链，但不同 runner 仍可能在真正构建 HAP 时提示缺 SDK。
+
+更多细节见：`simple_live_app/OHOS_NATIVE_PLAYER_MIGRATION.md`。
+
+## 下载与自动构建
+
+仓库 GitHub Actions 支持以下产物：
 
 - Android APK
-- iOS IPA
-- Windows 压缩包
+- iOS unsigned IPA
+- Windows ZIP
+- macOS DMG / ZIP
+- Linux DEB / ZIP
+- OpenHarmony / HarmonyOS NEXT HAP
 
-可在 GitHub Actions 中手动运行对应的 App workflow。当前维护重点是 `simple_live_app`，TV 版本不在本分支的主要适配范围内。
+主要 workflow：
 
-### 本地环境
+| Workflow | 说明 |
+| --- | --- |
+| `release` | tag 或手动触发的综合 Release 构建 |
+| `app-build-android-release` | Android APK |
+| `app-build-ios-manual` | iOS unsigned IPA |
+| `app-build-windows-release` | Windows 包 |
+| `app-build-macos-manual` | macOS 包 |
+| `app-build-linux-release` | Linux 包 |
+| `app-build-ohos-release` | OpenHarmony / HarmonyOS NEXT HAP |
 
-- Flutter SDK（需内置 Dart 3.10 或更高版本）
-- Android SDK（构建 Android）
-- Xcode（本机构建 iOS）
-- Visual Studio 2022 C++ 工具链（构建 Windows 或运行带原生 hook 的测试）
+## 本地开发环境
 
-### 获取依赖
+推荐环境：
+
+- Flutter SDK，需满足 `simple_live_app/pubspec.yaml` 的 Dart SDK 约束。
+- Android SDK / Android Studio，用于 Android 构建。
+- Xcode，用于 iOS / macOS 构建。
+- Visual Studio 2022 C++ 工具链，用于 Windows 构建和部分原生依赖测试。
+- DevEco Studio + OpenHarmony / HarmonyOS SDK，用于鸿蒙构建。
+
+获取依赖：
 
 ```bash
 cd simple_live_core
@@ -93,38 +129,82 @@ cd ../simple_live_app
 flutter pub get
 ```
 
-### 构建 Android
+## 本地构建
+
+### Android
 
 ```bash
 cd simple_live_app
 flutter build apk --release
 ```
 
-### 构建 Windows
+### iOS
+
+```bash
+cd simple_live_app
+flutter build ios --release --no-codesign
+```
+
+完整签名 IPA 需要 macOS、Xcode 和有效证书。
+
+### Windows
 
 ```bash
 cd simple_live_app
 flutter build windows --release
 ```
 
-### 构建 iOS
+### Linux
 
 ```bash
 cd simple_live_app
-flutter build ipa --release
+flutter build linux --release
 ```
 
-iOS 本地构建必须在 macOS/Xcode 环境运行；Windows 用户可使用仓库的 iOS GitHub Actions workflow。
+### macOS
+
+```bash
+cd simple_live_app
+flutter build macos --release
+```
+
+### OpenHarmony / HarmonyOS NEXT
+
+本地鸿蒙构建需要 Flutter OHOS TPC 分支和 DevEco / OHOS SDK。构建前临时使用鸿蒙依赖配置：
+
+```bash
+cd simple_live_app
+cp pubspec.yaml pubspec.default.yaml
+cp pubspec.ohos.yaml pubspec.yaml
+flutter pub get
+flutter build hap --release --dart-define=TARGET_OHOS=true
+```
+
+如果当前 Flutter OHOS SDK 不支持 `flutter build hap`，可进入 `simple_live_app/ohos` 使用 hvigor 构建：
+
+```bash
+cd simple_live_app/ohos
+ohpm install
+hvigorw assembleHap --mode module -p module=entry@default -p product=default
+```
+
+构建完成后记得恢复主配置：
+
+```bash
+cd simple_live_app
+mv pubspec.default.yaml pubspec.yaml
+```
 
 ## 项目结构
 
 | 目录 | 说明 |
 | --- | --- |
-| `simple_live_core` | 各平台接口、播放地址解析和弹幕协议 |
-| `simple_live_app` | Flutter 主应用，覆盖 Android、iOS、Windows 等平台 |
+| `simple_live_core` | 各平台接口、直播间解析、播放地址解析和弹幕协议 |
+| `simple_live_app` | Flutter 主应用，覆盖移动端、桌面端和鸿蒙适配骨架 |
 | `simple_live_console` | 核心接口调试工具 |
-| `simple_live_tv_app` | 上游 TV 应用代码，当前不作为主要维护目标 |
-| `.github/workflows` | App 自动构建与发布工作流 |
+| `simple_live_tv_app` | TV 应用代码，当前不是主要维护目标 |
+| `third_party` | 本地第三方补丁、弹幕组件和鸿蒙兼容 shim |
+| `.github/workflows` | 自动构建与 Release 工作流 |
 
 ## 开发验证
 
@@ -133,26 +213,26 @@ iOS 本地构建必须在 macOS/Xcode 环境运行；Windows 用户可使用仓�
 cd simple_live_core
 dart analyze
 
-# 快手相关测试
-dart test test/kuaishou_site_test.dart test/kuaishou_danmaku_test.dart
+# Core 测试
+dart test
 
 # App 静态分析
 cd ../simple_live_app
 flutter analyze
 ```
 
-`dart_quickjs` 包含原生构建 hook；Windows 运行部分测试时需要可用的 MSVC C/C++ 编译器。
+部分环境下 `dart_quickjs`、桌面播放器或鸿蒙工具链会依赖本机原生编译器 / SDK。若分析或构建卡在原生依赖，请先确认对应平台工具链是否完整。
 
 ## 更新日志
 
-参见 [CHANGELOG.md](CHANGELOG.md)。
+详见 [CHANGELOG.md](CHANGELOG.md)。
 
-## 上游与致谢
+## 上游与参考
 
 - [xiaoyaocz/dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live) — Simple Live 原始项目
 - [June6699/dart_simple_live](https://github.com/June6699/dart_simple_live) — 本仓库采用的上游维护基础
-- [heartsg/pure_live](https://github.com/heartsg/pure_live) — 快手站点适配参考
-- [OrdinaryRoad-Project/ordinaryroad-barrage-fly](https://github.com/OrdinaryRoad-Project/ordinaryroad-barrage-fly) — 快手弹幕协议对照参考
+- [heartsg/pure_live](https://github.com/heartsg/pure_live) — 直播平台适配参考
+- [OrdinaryRoad-Project/ordinaryroad-barrage-fly](https://github.com/OrdinaryRoad-Project/ordinaryroad-barrage-fly) — 弹幕协议参考
 - [wushuaihua520/BarrageGrab](https://github.com/wushuaihua520/BarrageGrab) — 多平台弹幕项目参考
 
 ## 许可
