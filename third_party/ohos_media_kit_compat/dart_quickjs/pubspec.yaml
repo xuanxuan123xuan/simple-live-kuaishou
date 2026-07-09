@@ -1,0 +1,7 @@
+name: dart_quickjs
+description: OHOS compatibility stub for dart_quickjs.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ">=3.0.5 <4.0.0"

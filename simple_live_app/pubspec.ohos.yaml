@@ -10,8 +10,7 @@ dependencies:
   simple_live_core:
     path: ../simple_live_core
   dart_quickjs:
-    git:
-      url: https://github.com/xiaoyaocz/dart_quickjs
+    path: ../third_party/ohos_media_kit_compat/dart_quickjs
   cupertino_icons: ^1.0.8
   remixicon: ^1.4.1
   get: ^4.7.3
@@ -98,3 +97,7 @@ flutter:
     - assets/images/douyin_emoji/
     - assets/icons/
     - assets/lotties/
+
+dependency_overrides:
+  dart_quickjs:
+    path: ../third_party/ohos_media_kit_compat/dart_quickjs
