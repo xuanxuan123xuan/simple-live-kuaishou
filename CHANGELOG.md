@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙构建将 file_picker 固定到 8.3.2，避开 win32 Dart 3.5 SDK 约束。
+
 - 鸿蒙构建使用本地 wakelock_plus shim，避开 package_info_plus 9.x 依赖冲突。
 
 - 鸿蒙构建将 archive 固定到 3.6.1，兼容 lottie 3.1.x 依赖约束。
