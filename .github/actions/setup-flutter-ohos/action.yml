@@ -43,38 +43,38 @@ runs:
           echo "FLUTTER_STORAGE_BASE_URL=$FLUTTER_STORAGE_BASE_URL_INPUT" >> "$GITHUB_ENV"
         fi
 
-    - name: Install OHOS SDK when provided
+    - name: Install OHOS SDK
       shell: bash
       env:
         OHOS_SDK_URL_INPUT: ${{ inputs.ohos-sdk-url }}
       run: |
         sdk_root="$RUNNER_TEMP/ohos-sdk"
-        if [[ -n "$OHOS_SDK_URL_INPUT" ]]; then
-          mkdir -p "$sdk_root"
-          curl -fL --retry 3 "$OHOS_SDK_URL_INPUT" -o "$RUNNER_TEMP/ohos-sdk.zip"
-          unzip -q "$RUNNER_TEMP/ohos-sdk.zip" -d "$sdk_root"
-          echo "OHOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
-          echo "HOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
-          echo "DEVECO_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
-          find "$sdk_root" -type d \( -name bin -o -name toolchains \) | while read -r dir; do
-            echo "$dir" >> "$GITHUB_PATH"
-          done
-        else
-          echo "OHOS_SDK_URL is not configured; workflow will try Flutter OHOS/hvigor defaults first."
-          echo "If the build later reports a missing SDK, add repository secret or variable OHOS_SDK_URL."
+        if [[ -z "$OHOS_SDK_URL_INPUT" ]]; then
+          echo "OHOS_SDK_URL is required for GitHub hosted runners." >&2
+          echo "Set repository secret or variable OHOS_SDK_URL to a zipped DevEco/OpenHarmony command-line SDK." >&2
+          echo "The hosted runner does not include ohpm/hvigorw/OpenHarmony SDK by default." >&2
+          exit 1
         fi
 
-    - name: Install OHOS command line tools
-      shell: bash
-      run: |
-        ohos_npm_registry="https://repo.harmonyos.com/npm/"
-        npm config set strict-ssl false
-        npm config set registry https://registry.npmjs.org/
-        npm config set @ohos:registry "$ohos_npm_registry"
-        npm install -g @ohos/hvigor @ohos/hvigor-ohos-plugin || true
+        mkdir -p "$sdk_root"
+        curl -fL --retry 3 "$OHOS_SDK_URL_INPUT" -o "$RUNNER_TEMP/ohos-sdk.zip"
+        unzip -q "$RUNNER_TEMP/ohos-sdk.zip" -d "$sdk_root"
+
+        echo "OHOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
+        echo "HOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
+        echo "DEVECO_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
+
+        while IFS= read -r dir; do
+          echo "$dir" >> "$GITHUB_PATH"
+          export PATH="$dir:$PATH"
+        done < <(find "$sdk_root" -type d \( -name bin -o -name toolchains \) | sort)
+
+        echo "SDK root: $sdk_root"
+        echo "Detected OHOS command paths:"
+        find "$sdk_root" -type f \( -name ohpm -o -name ohpm.bat -o -name hvigorw -o -name hvigorw.bat -o -name hvigor -o -name hvigor.bat \) | sort || true
+        if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi
         if command -v hvigorw >/dev/null 2>&1; then hvigorw --version || true; fi
         if command -v hvigor >/dev/null 2>&1; then hvigor --version || true; fi
-        if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi
 
     - name: Install Flutter OHOS
       shell: bash

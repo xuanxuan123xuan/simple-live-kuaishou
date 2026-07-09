@@ -1,6 +1,8 @@
 ## 未发布
 
-- 鸿蒙 workflow 改为仅让 @ohos 包走华为 npm 源，并在无 hvigorw 时回退使用全局 hvigor。
+- 鸿蒙 workflow 改为必须使用真实 OHOS SDK，不再尝试通过 npm 拼装 hvigor 工具链。
+
+- 移除鸿蒙 workflow 中通过 npm 安装 hvigor 的兜底逻辑，避免 GitHub runner 误判为具备完整 DevEco 构建环境。
 
 - 鸿蒙 workflow 改为从 flutter build --help 检测 hap 子命令，避免 --help 误判。
 

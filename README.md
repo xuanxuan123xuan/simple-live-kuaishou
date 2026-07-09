@@ -76,13 +76,13 @@ Simple Live 是一个跨平台聚合直播客户端，目标是用统一体验�
 | `.github/actions/setup-flutter-ohos` | GitHub Actions 中初始化 Flutter OHOS / OHOS SDK |
 | `.github/workflows/publish_app_release_ohos.yml` | 手动构建 `.hap` 的 workflow |
 
-GitHub 官方 runner 不内置 DevEco / OHOS SDK。若要稳定构建 `.hap`，建议在仓库 `Settings → Secrets and variables → Actions` 中配置：
+GitHub 官方 runner 不内置 DevEco / OHOS SDK。若要在 GitHub Actions 构建 `.hap`，必须在仓库 `Settings → Secrets and variables → Actions` 中配置：
 
 ```text
 OHOS_SDK_URL = 可直接下载的 OpenHarmony/HarmonyOS command-line SDK zip 链接
 ```
 
-未配置时 workflow 会尝试 Flutter OHOS / hvigor 默认工具链，但不同 runner 仍可能在真正构建 HAP 时提示缺 SDK。
+未配置时 workflow 会在初始化阶段直接失败并提示配置 `OHOS_SDK_URL`。这是刻意设计：避免 GitHub runner 缺少真实 `ohpm` / `hvigorw` / OpenHarmony SDK 时继续执行，产生误导性的构建错误。
 
 更多细节见：`simple_live_app/OHOS_NATIVE_PLAYER_MIGRATION.md`。
 
@@ -170,7 +170,7 @@ flutter build macos --release
 
 ### OpenHarmony / HarmonyOS NEXT
 
-本地鸿蒙构建需要 Flutter OHOS TPC 分支和 DevEco / OHOS SDK。构建前临时使用鸿蒙依赖配置：
+本地鸿蒙构建需要 Flutter OHOS TPC 分支和 DevEco / OHOS SDK，并确保 `ohpm` / `hvigorw` / SDK toolchains 已加入环境变量。构建前临时使用鸿蒙依赖配置：
 
 ```bash
 cd simple_live_app
