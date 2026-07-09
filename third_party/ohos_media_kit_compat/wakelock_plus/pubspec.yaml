@@ -1,0 +1,7 @@
+name: wakelock_plus
+description: OHOS compatibility stub for wakelock_plus.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ">=3.0.5 <4.0.0"
