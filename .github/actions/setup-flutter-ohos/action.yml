@@ -4,11 +4,11 @@ inputs:
   flutter-ohos-repo:
     description: Flutter OHOS TPC repository URL.
     required: false
-    default: https://gitee.com/openharmony-sig/flutter_flutter.git
+    default: https://gitcode.com/openharmony-sig/flutter_flutter.git
   flutter-ohos-ref:
-    description: Optional Flutter OHOS branch, tag or commit. Default uses the active Flutter OHOS master branch.
+    description: Optional Flutter OHOS branch, tag or commit. Default uses a Dart 3 compatible Flutter OHOS release.
     required: false
-    default: "master"
+    default: "3.22.4-ohos-1.1.3"
   ohos-sdk-url:
     description: URL(s) to OpenHarmony/HarmonyOS command-line SDK archive. Supports zip/tar.gz or whitespace-separated split archives.
     required: false

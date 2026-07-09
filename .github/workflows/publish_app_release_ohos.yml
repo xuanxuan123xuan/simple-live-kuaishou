@@ -18,11 +18,11 @@ on:
       flutter_ohos_repo:
         description: "Flutter OHOS TPC repository URL"
         required: false
-        default: "https://gitee.com/openharmony-sig/flutter_flutter.git"
+        default: "https://gitcode.com/openharmony-sig/flutter_flutter.git"
       flutter_ohos_ref:
-        description: "Flutter OHOS branch/tag/commit. Defaults to master."
+        description: "Flutter OHOS branch/tag/commit. Defaults to a Dart 3 compatible OHOS release."
         required: false
-        default: "master"
+        default: "3.22.4-ohos-1.1.3"
 
 permissions:
   contents: write

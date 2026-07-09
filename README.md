@@ -90,6 +90,15 @@ https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-win
 
 workflow 会额外下载公开的 `oh-command-line-tools-20240715.zip` 以提供 `ohpm`，再由 `ohpm install` 安装 OHOS 工程里的 hvigor 依赖。
 
+Flutter OHOS TPC 工具链默认使用 GitCode 源：
+
+```text
+FLUTTER_OHOS_REPO = https://gitcode.com/openharmony-sig/flutter_flutter.git
+FLUTTER_OHOS_REF  = 3.22.4-ohos-1.1.3
+```
+
+该分支同时具备 Dart 3 兼容性和 OHOS `flutter build hap` / `flutter build har` 支持；如果使用旧 Gitee `master` / `dev`，容易退回 Dart 2.19，导致项目 Dart SDK 约束解析失败。
+
 未配置时 workflow 会在初始化阶段直接失败并提示配置 `OHOS_SDK_URL`。这是刻意设计：避免 GitHub runner 缺少真实 `ohpm` / `hvigorw` / OpenHarmony SDK 时继续执行，产生误导性的构建错误。
 
 更多细节见：`simple_live_app/OHOS_NATIVE_PLAYER_MIGRATION.md`。
@@ -178,7 +187,7 @@ flutter build macos --release
 
 ### OpenHarmony / HarmonyOS NEXT
 
-本地鸿蒙构建需要 Flutter OHOS TPC 分支和 DevEco / OHOS SDK，并确保 `ohpm` / `hvigorw` / SDK toolchains 已加入环境变量。构建前临时使用鸿蒙依赖配置：
+本地鸿蒙构建需要 GitCode Flutter OHOS TPC `3.22.4-ohos-1.1.3`、DevEco / OHOS SDK，并确保 `ohpm` / `hvigorw` / SDK toolchains 已加入环境变量。构建前临时使用鸿蒙依赖配置：
 
 ```bash
 cd simple_live_app

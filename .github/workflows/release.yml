@@ -17,11 +17,11 @@ on:
       flutter_ohos_repo:
         description: "Flutter OHOS TPC repository URL"
         required: false
-        default: "https://gitee.com/openharmony-sig/flutter_flutter.git"
+        default: "https://gitcode.com/openharmony-sig/flutter_flutter.git"
       flutter_ohos_ref:
-        description: "Flutter OHOS branch/tag/commit. Defaults to master."
+        description: "Flutter OHOS branch/tag/commit. Defaults to a Dart 3 compatible OHOS release."
         required: false
-        default: "master"
+        default: "3.22.4-ohos-1.1.3"
 
 permissions:
   contents: write
@@ -382,8 +382,8 @@ jobs:
 
       - uses: ./.github/actions/setup-flutter-ohos
         with:
-          flutter-ohos-repo: ${{ inputs.flutter_ohos_repo || vars.FLUTTER_OHOS_REPO || 'https://gitee.com/openharmony-sig/flutter_flutter.git' }}
-          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref || vars.FLUTTER_OHOS_REF || 'master' }}
+          flutter-ohos-repo: ${{ inputs.flutter_ohos_repo || vars.FLUTTER_OHOS_REPO || 'https://gitcode.com/openharmony-sig/flutter_flutter.git' }}
+          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref || vars.FLUTTER_OHOS_REF || '3.22.4-ohos-1.1.3' }}
           ohos-sdk-url: ${{ secrets.OHOS_SDK_URL || vars.OHOS_SDK_URL }}
           pub-hosted-url: ${{ vars.PUB_HOSTED_URL }}
           flutter-storage-base-url: ${{ vars.FLUTTER_STORAGE_BASE_URL }}
