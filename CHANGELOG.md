@@ -1,5 +1,7 @@
 ## 未发布
 
+- GitHub Actions 的 Flutter OHOS clone 增加重试和 HTTP/1.1 配置，降低 Gitee TLS 断流导致的 early EOF 失败概率。
+
 - 鸿蒙构建使用本地 image_gallery_saver_plus shim，兼容 Flutter OHOS Dart 3.4 依赖解析。
 
 - GitHub Actions 为 Flutter OHOS 3.22 分支补充本地标准 tag，修复 SDK 版本显示为 `0.0.0-unknown` 导致 `pub get` 失败的问题。

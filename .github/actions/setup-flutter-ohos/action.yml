@@ -81,12 +81,23 @@ runs:
         FLUTTER_OHOS_REF: ${{ inputs.flutter-ohos-ref }}
       run: |
         flutter_root="$RUNNER_TEMP/flutter-ohos"
-        if [[ -n "$FLUTTER_OHOS_REF" ]]; then
-          git clone --depth 1 --branch "$FLUTTER_OHOS_REF" "$FLUTTER_OHOS_REPO" "$flutter_root"
-        else
-          git clone --depth 1 "$FLUTTER_OHOS_REPO" "$flutter_root"
-        fi
-        git -C "$flutter_root" fetch --force --tags --depth 1 origin 'refs/tags/*:refs/tags/*' || true
+        git config --global http.version HTTP/1.1
+        git config --global http.lowSpeedLimit 1000
+        git config --global http.lowSpeedTime 60
+        for attempt in 1 2 3; do
+          rm -rf "$flutter_root"
+          if [[ -n "$FLUTTER_OHOS_REF" ]]; then
+            git clone --depth 1 --single-branch --branch "$FLUTTER_OHOS_REF" "$FLUTTER_OHOS_REPO" "$flutter_root" && break
+          else
+            git clone --depth 1 --single-branch "$FLUTTER_OHOS_REPO" "$flutter_root" && break
+          fi
+          if [[ "$attempt" == "3" ]]; then
+            echo "Failed to clone Flutter OHOS after $attempt attempts." >&2
+            exit 1
+          fi
+          echo "Flutter OHOS clone failed; retrying in $((attempt * 10)) seconds..." >&2
+          sleep $((attempt * 10))
+        done
         if [[ "$FLUTTER_OHOS_REF" == 3.22.* ]]; then
           git -C "$flutter_root" tag -f 3.22.0 HEAD || true
         fi
