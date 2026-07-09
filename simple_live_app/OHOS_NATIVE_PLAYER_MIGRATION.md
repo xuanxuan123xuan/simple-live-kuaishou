@@ -174,7 +174,7 @@ simple_live_app/ohos/entry/build/default/outputs/default/entry-default-signed.ha
 
 GitHub 官方 runner 不内置 DevEco/OpenHarmony SDK，仓库需要配置：
 
-- `OHOS_SDK_URL`：必填，放在 Repository Secret 或 Variable，值为可下载的 OpenHarmony/HarmonyOS command-line SDK zip。
+- `OHOS_SDK_URL`：推荐配置，放在 Repository Secret 或 Variable，值为可下载的 OpenHarmony/HarmonyOS command-line SDK zip；未配置时 workflow 会尝试 Flutter OHOS/hvigor 默认工具链，但不同 runner 很可能仍会在真正构建 HAP 时提示缺 SDK。
 - `FLUTTER_OHOS_REPO`：可选，默认 `https://gitee.com/openharmony-sig/flutter_flutter.git`。
 - `FLUTTER_OHOS_REF`：可选，指定 Flutter OHOS TPC 分支/标签/commit；留空使用仓库默认分支。
 - `PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL`：可选，网络慢时配置镜像。

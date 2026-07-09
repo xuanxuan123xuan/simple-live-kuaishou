@@ -362,6 +362,7 @@ jobs:
 
   # ---- OpenHarmony / HarmonyOS NEXT ----
   ohos:
+    continue-on-error: true
     needs: resolve
     if: ${{ github.event_name == 'push' || inputs.build_ohos == true }}
     runs-on: ubuntu-22.04
