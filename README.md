@@ -79,7 +79,13 @@ Simple Live 是一个跨平台聚合直播客户端，目标是用统一体验�
 GitHub 官方 runner 不内置 DevEco / OHOS SDK。若要在 GitHub Actions 构建 `.hap`，必须在仓库 `Settings → Secrets and variables → Actions` 中配置：
 
 ```text
-OHOS_SDK_URL = 可直接下载的 OpenHarmony/HarmonyOS command-line SDK zip 链接
+OHOS_SDK_URL = 可直接下载的 OpenHarmony/HarmonyOS command-line SDK archive 链接
+```
+
+`OHOS_SDK_URL` 支持单个 `.zip` / `.tar.gz` 链接，也支持空格或换行分隔的分卷 `.tar.gz.aa`、`.tar.gz.ab` 链接。当前项目默认以 `compatibleSdkVersion: 5.0.0(12)` 构建，可使用 OpenHarmony 5.0.0 Linux SDK 分卷：
+
+```text
+https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.aa https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.ab
 ```
 
 未配置时 workflow 会在初始化阶段直接失败并提示配置 `OHOS_SDK_URL`。这是刻意设计：避免 GitHub runner 缺少真实 `ohpm` / `hvigorw` / OpenHarmony SDK 时继续执行，产生误导性的构建错误。

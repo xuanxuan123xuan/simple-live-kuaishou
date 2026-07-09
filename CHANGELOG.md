@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙 workflow 支持 `OHOS_SDK_URL` 配置单包或分卷 SDK archive，并补充 OpenHarmony 5.0.0 Linux SDK 示例。
+
 - 鸿蒙 workflow 改为必须使用真实 OHOS SDK，不再尝试通过 npm 拼装 hvigor 工具链。
 
 - 移除鸿蒙 workflow 中通过 npm 安装 hvigor 的兜底逻辑，避免 GitHub runner 误判为具备完整 DevEco 构建环境。

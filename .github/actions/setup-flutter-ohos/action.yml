@@ -10,7 +10,7 @@ inputs:
     required: false
     default: "3.22.1-ohos-0.1.0"
   ohos-sdk-url:
-    description: URL to a zipped OpenHarmony/HarmonyOS command-line SDK. Use secrets.OHOS_SDK_URL or vars.OHOS_SDK_URL.
+    description: URL(s) to OpenHarmony/HarmonyOS command-line SDK archive. Supports zip/tar.gz or whitespace-separated split archives.
     required: false
     default: ""
   pub-hosted-url:
@@ -51,14 +51,45 @@ runs:
         sdk_root="$RUNNER_TEMP/ohos-sdk"
         if [[ -z "$OHOS_SDK_URL_INPUT" ]]; then
           echo "OHOS_SDK_URL is required for GitHub hosted runners." >&2
-          echo "Set repository secret or variable OHOS_SDK_URL to a zipped DevEco/OpenHarmony command-line SDK." >&2
+          echo "Set repository secret or variable OHOS_SDK_URL to DevEco/OpenHarmony SDK archive URL(s)." >&2
           echo "The hosted runner does not include ohpm/hvigorw/OpenHarmony SDK by default." >&2
           exit 1
         fi
 
-        mkdir -p "$sdk_root"
-        curl -fL --retry 3 "$OHOS_SDK_URL_INPUT" -o "$RUNNER_TEMP/ohos-sdk.zip"
-        unzip -q "$RUNNER_TEMP/ohos-sdk.zip" -d "$sdk_root"
+        download_dir="$RUNNER_TEMP/ohos-sdk-download"
+        mkdir -p "$sdk_root" "$download_dir"
+        mapfile -t sdk_urls < <(printf '%s\n' "$OHOS_SDK_URL_INPUT" | awk '{ for (i = 1; i <= NF; i++) print $i }')
+        if [[ "${#sdk_urls[@]}" -eq 0 ]]; then
+          echo "OHOS_SDK_URL did not contain any downloadable URL." >&2
+          exit 1
+        fi
+
+        for url in "${sdk_urls[@]}"; do
+          file_name="${url%%\?*}"
+          file_name="${file_name##*/}"
+          if [[ -z "$file_name" || "$file_name" == "$url" ]]; then
+            file_name="ohos-sdk-archive"
+          fi
+          echo "Downloading OHOS SDK part: $file_name"
+          curl -fL --retry 3 "$url" -o "$download_dir/$file_name"
+        done
+
+        archive_path=""
+        if compgen -G "$download_dir/*.zip" >/dev/null; then
+          archive_path="$(find "$download_dir" -maxdepth 1 -type f -name '*.zip' | sort | head -n 1)"
+          unzip -q "$archive_path" -d "$sdk_root"
+        elif compgen -G "$download_dir/*.tar.gz" >/dev/null; then
+          archive_path="$(find "$download_dir" -maxdepth 1 -type f -name '*.tar.gz' | sort | head -n 1)"
+          tar -xzf "$archive_path" -C "$sdk_root"
+        elif compgen -G "$download_dir/*.tar.gz.*" >/dev/null; then
+          archive_path="$RUNNER_TEMP/ohos-sdk.tar.gz"
+          cat $(find "$download_dir" -maxdepth 1 -type f -name '*.tar.gz.*' | sort) > "$archive_path"
+          tar -xzf "$archive_path" -C "$sdk_root"
+        else
+          echo "Unsupported OHOS SDK archive format. Expected .zip, .tar.gz or split .tar.gz.* files." >&2
+          find "$download_dir" -maxdepth 1 -type f -print >&2
+          exit 1
+        fi
 
         echo "OHOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
         echo "HOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
