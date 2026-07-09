@@ -1,9 +1,8 @@
 ## 未发布
 
-- Flutter OHOS 默认分支固定为 3.22.1-ohos-0.1.0，避免 GitHub Actions 拉到 Dart 2.x 旧分支导致依赖解析失败。
-
+- `pubspec.ohos.yaml` 中 `intl` 按 Flutter OHOS 3.22 的 `flutter_localizations` 约束固定为 `0.19.0`，修复鸿蒙依赖解析冲突。
+- Flutter OHOS 默认分支固定为 `3.22.1-ohos-0.1.0`，避免 GitHub Actions 拉到 Dart 2.x 旧分支导致依赖解析失败。
 - README 重写为项目级说明，覆盖整体功能、平台支持、构建方式、鸿蒙 NEXT 适配和工作流说明。
-
 # 更新日志
 
 ## 2026-06-28
