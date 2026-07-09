@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙 workflow 自动下载 OHOS command-line tools，使用 `ohpm install` 后从工程依赖中查找 hvigor 入口。
+
 - 鸿蒙 workflow 支持 `OHOS_SDK_URL` 配置单包或分卷 SDK archive，并补充 OpenHarmony 5.0.0 Linux SDK 示例。
 
 - 鸿蒙 workflow 改为必须使用真实 OHOS SDK，不再尝试通过 npm 拼装 hvigor 工具链。

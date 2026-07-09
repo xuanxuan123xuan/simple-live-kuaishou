@@ -88,6 +88,8 @@ OHOS_SDK_URL = 可直接下载的 OpenHarmony/HarmonyOS command-line SDK archive
 https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.aa https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.ab
 ```
 
+workflow 会额外下载公开的 `oh-command-line-tools-20240715.zip` 以提供 `ohpm`，再由 `ohpm install` 安装 OHOS 工程里的 hvigor 依赖。
+
 未配置时 workflow 会在初始化阶段直接失败并提示配置 `OHOS_SDK_URL`。这是刻意设计：避免 GitHub runner 缺少真实 `ohpm` / `hvigorw` / OpenHarmony SDK 时继续执行，产生误导性的构建错误。
 
 更多细节见：`simple_live_app/OHOS_NATIVE_PLAYER_MIGRATION.md`。

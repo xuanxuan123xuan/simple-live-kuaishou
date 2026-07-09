@@ -13,6 +13,10 @@ inputs:
     description: URL(s) to OpenHarmony/HarmonyOS command-line SDK archive. Supports zip/tar.gz or whitespace-separated split archives.
     required: false
     default: ""
+  ohos-commandline-tools-url:
+    description: URL to OHOS command-line tools archive that provides ohpm.
+    required: false
+    default: "https://repo.huaweicloud.com/harmonyos/ohpm/5.0.2/oh-command-line-tools-20240715.zip"
   pub-hosted-url:
     description: Optional PUB_HOSTED_URL mirror.
     required: false
@@ -47,6 +51,7 @@ runs:
       shell: bash
       env:
         OHOS_SDK_URL_INPUT: ${{ inputs.ohos-sdk-url }}
+        OHOS_COMMANDLINE_TOOLS_URL_INPUT: ${{ inputs.ohos-commandline-tools-url }}
       run: |
         sdk_root="$RUNNER_TEMP/ohos-sdk"
         if [[ -z "$OHOS_SDK_URL_INPUT" ]]; then
@@ -106,6 +111,24 @@ runs:
         if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi
         if command -v hvigorw >/dev/null 2>&1; then hvigorw --version || true; fi
         if command -v hvigor >/dev/null 2>&1; then hvigor --version || true; fi
+
+        if [[ -n "$OHOS_COMMANDLINE_TOOLS_URL_INPUT" ]]; then
+          tools_root="$RUNNER_TEMP/ohos-command-line-tools"
+          mkdir -p "$tools_root"
+          curl -fL --retry 3 "$OHOS_COMMANDLINE_TOOLS_URL_INPUT" -o "$RUNNER_TEMP/ohos-command-line-tools.zip"
+          unzip -q "$RUNNER_TEMP/ohos-command-line-tools.zip" -d "$tools_root"
+          while IFS= read -r dir; do
+            echo "$dir" >> "$GITHUB_PATH"
+            export PATH="$dir:$PATH"
+          done < <(find "$tools_root" -type d -name bin | sort)
+
+          echo "Detected OHOS command-line tool paths:"
+          find "$tools_root" -type f \( -name ohpm -o -name ohpm.bat -o -name hvigorw -o -name hvigorw.bat -o -name hvigor -o -name hvigor.bat \) | sort || true
+          find "$tools_root" -type f \( -name ohpm -o -name hvigorw -o -name hvigor \) -exec chmod +x {} \; || true
+          if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi
+          if command -v hvigorw >/dev/null 2>&1; then hvigorw --version || true; fi
+          if command -v hvigor >/dev/null 2>&1; then hvigor --version || true; fi
+        fi
 
     - name: Install Flutter OHOS
       shell: bash

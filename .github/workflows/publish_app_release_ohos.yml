@@ -113,15 +113,22 @@ jobs:
             echo "Current Flutter OHOS SDK does not expose 'flutter build hap'; falling back to SDK/project hvigorw." >&2
             cd ohos
             if command -v ohpm >/dev/null 2>&1; then
+              ohpm config set registry https://repo.harmonyos.com/ohpm/ || true
               ohpm install
             fi
             if [[ -x ./hvigorw ]]; then
               ./hvigorw assembleHap --mode module -p module=entry@default -p product=default
             elif command -v hvigorw >/dev/null 2>&1; then
               hvigorw assembleHap --mode module -p module=entry@default -p product=default
+            elif [[ -x ./oh_modules/.bin/hvigorw ]]; then
+              ./oh_modules/.bin/hvigorw assembleHap --mode module -p module=entry@default -p product=default
+            elif [[ -x ./oh_modules/.bin/hvigor ]]; then
+              ./oh_modules/.bin/hvigor assembleHap --mode module -p module=entry@default -p product=default
+            elif [[ -f ./oh_modules/@ohos/hvigor/index.js ]]; then
+              node ./oh_modules/@ohos/hvigor/index.js assembleHap --mode module -p module=entry@default -p product=default
             else
-              echo "Neither flutter build hap nor hvigorw is available." >&2
-              echo "Provide a DevEco/OpenHarmony command-line SDK via OHOS_SDK_URL, or build on a self-hosted DevEco runner." >&2
+              echo "Neither flutter build hap nor an installed hvigor entrypoint is available." >&2
+              echo "Check OHOS_SDK_URL and the OHOS command-line tools download." >&2
               exit 127
             fi
           fi
