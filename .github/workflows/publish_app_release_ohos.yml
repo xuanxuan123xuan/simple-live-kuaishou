@@ -111,6 +111,15 @@ jobs:
             flutter build hap "${hap_args[@]}"
           else
             echo "Current Flutter OHOS SDK does not expose 'flutter build hap'; falling back to SDK/project hvigorw." >&2
+            mkdir -p ohos/har
+            if [[ ! -f ohos/har/flutter.har ]]; then
+              flutter_har="$(find "$FLUTTER_ROOT" -type f -name flutter.har | sort | head -n 1 || true)"
+              if [[ -z "$flutter_har" ]]; then
+                echo "flutter.har was not found in FLUTTER_ROOT=$FLUTTER_ROOT." >&2
+                exit 1
+              fi
+              cp "$flutter_har" ohos/har/flutter.har
+            fi
             cd ohos
             if command -v ohpm >/dev/null 2>&1; then
               ohpm config set registry https://repo.harmonyos.com/ohpm/ || true
