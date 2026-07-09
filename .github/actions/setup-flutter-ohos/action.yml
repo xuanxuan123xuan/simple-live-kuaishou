@@ -165,4 +165,6 @@ runs:
       run: |
         flutter --version
         flutter config --enable-ohos || true
+        flutter precache --ohos
+        find "$FLUTTER_ROOT/bin/cache/artifacts" -type f -name flutter.har -print || true
         flutter doctor -v || true

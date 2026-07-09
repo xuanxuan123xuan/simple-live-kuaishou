@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙 workflow 在 Flutter OHOS 初始化阶段执行 `flutter precache --ohos`，确保 engine artifacts 中存在 `flutter.har`。
+
 - 鸿蒙 workflow 在 hvigor fallback 前自动执行 `flutter build har` 并拷贝生成的 `flutter.har` 到 OHOS 工程依赖目录。
 
 - 鸿蒙 workflow 自动下载 OHOS command-line tools，使用 `ohpm install` 后从工程依赖中查找 hvigor 入口。
