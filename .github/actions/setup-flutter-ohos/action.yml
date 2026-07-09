@@ -67,9 +67,10 @@ runs:
     - name: Install OHOS command line tools
       shell: bash
       run: |
+        ohos_npm_registry="https://repo.harmonyos.com/npm/"
         npm config set strict-ssl false
-        npm install -g @ohos/hvigor @ohos/hvigor-ohos-plugin || true
-        npm install -g @ohos/ohpm || true
+        npm config set @ohos:registry "$ohos_npm_registry"
+        npm install -g @ohos/hvigor @ohos/hvigor-ohos-plugin --registry="$ohos_npm_registry" || true
         if command -v hvigorw >/dev/null 2>&1; then hvigorw --version || true; fi
         if command -v hvigor >/dev/null 2>&1; then hvigor --version || true; fi
         if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi

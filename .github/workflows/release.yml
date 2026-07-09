@@ -424,8 +424,13 @@ jobs:
             fi
             if [[ -x ./hvigorw ]]; then
               ./hvigorw assembleHap --mode module -p module=entry@default -p product=default
-            else
+            elif command -v hvigorw >/dev/null 2>&1; then
               hvigorw assembleHap --mode module -p module=entry@default -p product=default
+            elif command -v hvigor >/dev/null 2>&1; then
+              hvigor assembleHap --mode module -p module=entry@default -p product=default
+            else
+              echo "Neither flutter build hap nor hvigor/hvigorw is available. Check Flutter OHOS and OHOS SDK setup." >&2
+              exit 127
             fi
           fi
 
