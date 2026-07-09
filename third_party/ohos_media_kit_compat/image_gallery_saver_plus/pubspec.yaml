@@ -1,0 +1,11 @@
+name: image_gallery_saver_plus
+description: OHOS compatibility shim for Simple Live screenshot save calls.
+version: 4.0.1
+publish_to: none
+
+environment:
+  sdk: ">=3.0.5 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter

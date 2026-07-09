@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙构建使用本地 image_gallery_saver_plus shim，兼容 Flutter OHOS Dart 3.4 依赖解析。
+
 - GitHub Actions 为 Flutter OHOS 3.22 分支补充本地标准 tag，修复 SDK 版本显示为 `0.0.0-unknown` 导致 `pub get` 失败的问题。
 - `pubspec.ohos.yaml` 中 `intl` 按 Flutter OHOS 3.22 的 `flutter_localizations` 约束固定为 `0.19.0`，修复鸿蒙依赖解析冲突。
 - Flutter OHOS 默认分支固定为 `3.22.1-ohos-0.1.0`，避免 GitHub Actions 拉到 Dart 2.x 旧分支导致依赖解析失败。
