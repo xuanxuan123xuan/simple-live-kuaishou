@@ -37,7 +37,7 @@ dependencies:
   lottie: ^3.3.2
   canvas_danmaku: ^0.2.7
   package_info_plus: 8.3.1
-  device_info_plus: 11.4.0
+  device_info_plus: 11.3.0
   url_launcher: 6.3.1
   share_plus: 10.1.4
   path_provider: ^2.1.5

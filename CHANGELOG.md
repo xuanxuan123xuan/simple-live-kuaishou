@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙构建将 device_info_plus 继续降到 11.3.0，避开 Flutter OHOS 固定 meta 1.12.0 冲突。
+
 - 鸿蒙构建将 permission_handler 继续降到 11.3.1，兼容 Flutter OHOS Dart 3.4。
 
 - 鸿蒙构建固定 package_info_plus、device_info_plus、share_plus、permission_handler、file_picker 到 Dart 3.4 兼容版本。
