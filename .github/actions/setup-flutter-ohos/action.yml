@@ -96,18 +96,39 @@ runs:
           exit 1
         fi
 
-        echo "OHOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
-        echo "HOS_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
-        echo "DEVECO_SDK_HOME=$sdk_root" >> "$GITHUB_ENV"
+        harmony_sdk_home="$sdk_root"
+        candidate_file="$RUNNER_TEMP/ohos-sdk-candidates.txt"
+        : > "$candidate_file"
+        printf '%s\n' "$sdk_root" >> "$candidate_file"
+        while IFS= read -r sdk_pkg_json; do
+          sdk_pkg_dir="$(dirname "$sdk_pkg_json")"
+          printf '%s\n' "$(dirname "$sdk_pkg_dir")" >> "$candidate_file"
+          printf '%s\n' "$sdk_pkg_dir" >> "$candidate_file"
+        done < <(find "$sdk_root" -type f -name sdk-pkg.json 2>/dev/null | sort)
+        while IFS= read -r candidate; do
+          [[ -d "$candidate" ]] || continue
+          if [[ -d "$candidate/hmscore" && -d "$candidate/openharmony" ]] ||
+             find "$candidate" -mindepth 2 -maxdepth 2 -type f -name sdk-pkg.json -print -quit 2>/dev/null | grep -q .; then
+            harmony_sdk_home="$candidate"
+            break
+          fi
+        done < <(sort -u "$candidate_file")
+
+        echo "OHOS_SDK_HOME=$harmony_sdk_home" >> "$GITHUB_ENV"
+        echo "HOS_SDK_HOME=$harmony_sdk_home" >> "$GITHUB_ENV"
+        echo "DEVECO_SDK_HOME=$harmony_sdk_home" >> "$GITHUB_ENV"
 
         while IFS= read -r dir; do
           echo "$dir" >> "$GITHUB_PATH"
           export PATH="$dir:$PATH"
-        done < <(find "$sdk_root" -type d \( -name bin -o -name toolchains \) | sort)
+        done < <(find "$harmony_sdk_home" -type d \( -name bin -o -name toolchains \) | sort)
 
         echo "SDK root: $sdk_root"
+        echo "Detected Harmony SDK home: $harmony_sdk_home"
+        echo "Detected SDK package files:"
+        find "$sdk_root" -type f -name sdk-pkg.json | sort | head -n 30 || true
         echo "Detected OHOS command paths:"
-        find "$sdk_root" -type f \( -name ohpm -o -name ohpm.bat -o -name hvigorw -o -name hvigorw.bat -o -name hvigor -o -name hvigor.bat \) | sort || true
+        find "$harmony_sdk_home" -type f \( -name ohpm -o -name ohpm.bat -o -name hvigorw -o -name hvigorw.bat -o -name hvigor -o -name hvigor.bat \) | sort || true
         if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi
         if command -v hvigorw >/dev/null 2>&1; then hvigorw --version || true; fi
         if command -v hvigor >/dev/null 2>&1; then hvigor --version || true; fi
@@ -169,6 +190,11 @@ runs:
           flutter config --enable-ohos || true
         else
           echo "Current Flutter SDK does not expose 'flutter config --enable-ohos'; skipping."
+        fi
+        if grep -q -- "--ohos-sdk" <<< "$config_help"; then
+          flutter config --ohos-sdk "$HOS_SDK_HOME" || true
+        else
+          echo "Current Flutter SDK does not expose 'flutter config --ohos-sdk'; relying on HOS_SDK_HOME."
         fi
         precache_help="$(flutter precache --help 2>&1 || true)"
         if grep -q -- "--ohos" <<< "$precache_help"; then

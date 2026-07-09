@@ -2,6 +2,8 @@
 
 - 鸿蒙 workflow 默认 Flutter OHOS 工具链改用 GitCode `openharmony-sig/flutter_flutter` 的 `3.22.4-ohos-1.1.3`，同时满足 Dart 3 约束和 OHOS 构建命令。
 
+- 鸿蒙 setup action 自动从 `sdk-pkg.json` 探测真实 `HOS_SDK_HOME`，并写入 `flutter config --ohos-sdk`，修复 SDK 解压外层目录导致的 `No Hmos SDK found`。
+
 - 鸿蒙 workflow 默认 Flutter OHOS 分支从 `dev` 改为 `master`，避免 `dev` 分支 Dart 2.19 与项目 Dart 3 约束冲突。
 
 - 鸿蒙 workflow 默认 Flutter OHOS 分支改为 `dev`，避免 `3.22.1-ohos-0.1.0` 实际不包含 OHOS tool 导致构建命令缺失。
