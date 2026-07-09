@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙构建将 url_launcher 固定到 6.3.1，兼容 Flutter OHOS Dart 3.4。
+
 - GitHub Actions 的 Flutter OHOS clone 增加重试和 HTTP/1.1 配置，降低 Gitee TLS 断流导致的 early EOF 失败概率。
 
 - 鸿蒙构建使用本地 image_gallery_saver_plus shim，兼容 Flutter OHOS Dart 3.4 依赖解析。
