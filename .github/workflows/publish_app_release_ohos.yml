@@ -98,7 +98,8 @@ jobs:
         shell: bash
         run: |
           cd simple_live_app
-          if flutter build hap --help >/dev/null 2>&1; then
+          build_help="$(flutter build --help 2>&1 || true)"
+          if grep -Eq "(^|[[:space:]])hap([[:space:]]|$)" <<< "$build_help"; then
             hap_help="$(flutter build hap --help 2>&1 || true)"
             hap_args=()
             if grep -q -- "--release" <<< "$hap_help"; then

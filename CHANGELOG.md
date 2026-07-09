@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙 workflow 改为从 flutter build --help 检测 hap 子命令，避免 --help 误判。
+
 - 鸿蒙 workflow 构建 HAP 时动态检测 flutter build hap 参数，兼容无 --release 选项的 Flutter OHOS 分支。
 
 - 鸿蒙构建将 file_picker 固定到 8.3.2，避开 win32 Dart 3.5 SDK 约束。
