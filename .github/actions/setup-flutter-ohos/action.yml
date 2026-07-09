@@ -86,6 +86,10 @@ runs:
         else
           git clone --depth 1 "$FLUTTER_OHOS_REPO" "$flutter_root"
         fi
+        git -C "$flutter_root" fetch --force --tags --depth 1 origin 'refs/tags/*:refs/tags/*' || true
+        if [[ "$FLUTTER_OHOS_REF" == 3.22.* ]]; then
+          git -C "$flutter_root" tag -f 3.22.0 HEAD || true
+        fi
         echo "$flutter_root/bin" >> "$GITHUB_PATH"
         echo "FLUTTER_ROOT=$flutter_root" >> "$GITHUB_ENV"
 
