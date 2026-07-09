@@ -19,9 +19,9 @@ on:
         required: false
         default: "https://gitee.com/openharmony-sig/flutter_flutter.git"
       flutter_ohos_ref:
-        description: "Flutter OHOS branch/tag/commit. Defaults to dev."
+        description: "Flutter OHOS branch/tag/commit. Defaults to master."
         required: false
-        default: "dev"
+        default: "master"
 
 permissions:
   contents: write
@@ -383,7 +383,7 @@ jobs:
       - uses: ./.github/actions/setup-flutter-ohos
         with:
           flutter-ohos-repo: ${{ inputs.flutter_ohos_repo || vars.FLUTTER_OHOS_REPO || 'https://gitee.com/openharmony-sig/flutter_flutter.git' }}
-          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref || vars.FLUTTER_OHOS_REF || 'dev' }}
+          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref || vars.FLUTTER_OHOS_REF || 'master' }}
           ohos-sdk-url: ${{ secrets.OHOS_SDK_URL || vars.OHOS_SDK_URL }}
           pub-hosted-url: ${{ vars.PUB_HOSTED_URL }}
           flutter-storage-base-url: ${{ vars.FLUTTER_STORAGE_BASE_URL }}

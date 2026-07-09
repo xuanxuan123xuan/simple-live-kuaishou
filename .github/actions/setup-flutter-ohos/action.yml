@@ -6,9 +6,9 @@ inputs:
     required: false
     default: https://gitee.com/openharmony-sig/flutter_flutter.git
   flutter-ohos-ref:
-    description: Optional Flutter OHOS branch, tag or commit. Default uses the active Flutter OHOS dev branch.
+    description: Optional Flutter OHOS branch, tag or commit. Default uses the active Flutter OHOS master branch.
     required: false
-    default: "dev"
+    default: "master"
   ohos-sdk-url:
     description: URL(s) to OpenHarmony/HarmonyOS command-line SDK archive. Supports zip/tar.gz or whitespace-separated split archives.
     required: false

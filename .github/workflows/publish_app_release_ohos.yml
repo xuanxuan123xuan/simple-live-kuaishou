@@ -20,9 +20,9 @@ on:
         required: false
         default: "https://gitee.com/openharmony-sig/flutter_flutter.git"
       flutter_ohos_ref:
-        description: "Flutter OHOS branch/tag/commit. Defaults to dev."
+        description: "Flutter OHOS branch/tag/commit. Defaults to master."
         required: false
-        default: "dev"
+        default: "master"
 
 permissions:
   contents: write
