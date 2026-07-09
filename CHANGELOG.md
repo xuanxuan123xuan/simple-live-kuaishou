@@ -1,6 +1,6 @@
 ## 未发布
 
-- 鸿蒙 workflow 改为从华为 npm 源安装 hvigor，并在无 hvigorw 时回退使用全局 hvigor。
+- 鸿蒙 workflow 改为仅让 @ohos 包走华为 npm 源，并在无 hvigorw 时回退使用全局 hvigor。
 
 - 鸿蒙 workflow 改为从 flutter build --help 检测 hap 子命令，避免 --help 误判。
 
