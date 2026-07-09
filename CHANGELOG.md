@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙构建将 cross_file 固定到 0.3.4+2，兼容 Flutter OHOS Dart 3.4。
+
 - 鸿蒙构建使用本地 flutter_inappwebview shim，避开上游插件 Dart 3.5 SDK 约束和原生平台依赖。
 
 - 鸿蒙构建将 shelf 固定到 1.4.1，避开 Flutter OHOS 固定 collection 1.18.0 冲突。
