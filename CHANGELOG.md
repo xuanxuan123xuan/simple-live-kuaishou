@@ -1,5 +1,7 @@
 ## 未发布
 
+- 修复鸿蒙 pubspec.ohos.yaml 重复 dependency_overrides 导致的 pub get 解析失败。
+
 - 鸿蒙构建使用本地 dart_quickjs shim，避开上游 git 包 Dart 3.10 SDK 约束。
 
 - 鸿蒙构建将 extended_image 固定到 9.1.0，兼容 Flutter OHOS Dart 3.4。

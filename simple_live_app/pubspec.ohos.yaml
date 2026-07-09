@@ -88,6 +88,8 @@ dev_dependencies:
 dependency_overrides:
   canvas_danmaku:
     path: ../third_party/canvas_danmaku
+  dart_quickjs:
+    path: ../third_party/ohos_media_kit_compat/dart_quickjs
 
 flutter:
   uses-material-design: true
@@ -97,7 +99,3 @@ flutter:
     - assets/images/douyin_emoji/
     - assets/icons/
     - assets/lotties/
-
-dependency_overrides:
-  dart_quickjs:
-    path: ../third_party/ohos_media_kit_compat/dart_quickjs
