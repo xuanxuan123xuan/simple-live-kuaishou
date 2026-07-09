@@ -6,9 +6,9 @@ inputs:
     required: false
     default: https://gitee.com/openharmony-sig/flutter_flutter.git
   flutter-ohos-ref:
-    description: Optional Flutter OHOS branch, tag or commit. Default uses Flutter OHOS 3.22.1 with Dart 3.
+    description: Optional Flutter OHOS branch, tag or commit. Default uses the active Flutter OHOS dev branch.
     required: false
-    default: "3.22.1-ohos-0.1.0"
+    default: "dev"
   ohos-sdk-url:
     description: URL(s) to OpenHarmony/HarmonyOS command-line SDK archive. Supports zip/tar.gz or whitespace-separated split archives.
     required: false
@@ -164,7 +164,18 @@ runs:
       shell: bash
       run: |
         flutter --version
-        flutter config --enable-ohos || true
-        flutter precache --ohos
+        config_help="$(flutter config --help 2>&1 || true)"
+        if grep -q -- "--enable-ohos" <<< "$config_help"; then
+          flutter config --enable-ohos || true
+        else
+          echo "Current Flutter SDK does not expose 'flutter config --enable-ohos'; skipping."
+        fi
+        precache_help="$(flutter precache --help 2>&1 || true)"
+        if grep -q -- "--ohos" <<< "$precache_help"; then
+          flutter precache --ohos
+        else
+          echo "Current Flutter SDK does not expose 'flutter precache --ohos'; using default precache."
+          flutter precache
+        fi
         find "$FLUTTER_ROOT/bin/cache/artifacts" -type f -name flutter.har -print || true
         flutter doctor -v || true

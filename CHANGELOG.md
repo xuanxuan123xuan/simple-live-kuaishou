@@ -1,5 +1,9 @@
 ## 未发布
 
+- 鸿蒙 workflow 默认 Flutter OHOS 分支改为 `dev`，避免 `3.22.1-ohos-0.1.0` 实际不包含 OHOS tool 导致构建命令缺失。
+
+- 鸿蒙 workflow 对 `flutter config --enable-ohos` 和 `flutter precache --ohos` 增加能力检测，兼容不暴露这些参数的 Flutter OHOS 分支。
+
 - 鸿蒙 workflow 在 Flutter OHOS 初始化阶段执行 `flutter precache --ohos`，确保 engine artifacts 中存在 `flutter.har`。
 
 - 鸿蒙 workflow 在 hvigor fallback 前自动执行 `flutter build har` 并拷贝生成的 `flutter.har` 到 OHOS 工程依赖目录。
@@ -52,7 +56,7 @@
 
 - GitHub Actions 为 Flutter OHOS 3.22 分支补充本地标准 tag，修复 SDK 版本显示为 `0.0.0-unknown` 导致 `pub get` 失败的问题。
 - `pubspec.ohos.yaml` 中 `intl` 按 Flutter OHOS 3.22 的 `flutter_localizations` 约束固定为 `0.19.0`，修复鸿蒙依赖解析冲突。
-- Flutter OHOS 默认分支固定为 `3.22.1-ohos-0.1.0`，避免 GitHub Actions 拉到 Dart 2.x 旧分支导致依赖解析失败。
+- 曾将 Flutter OHOS 默认分支固定为 `3.22.1-ohos-0.1.0` 以规避旧分支 Dart 版本问题；现已改用包含 OHOS tool 的 `dev` 分支。
 - README 重写为项目级说明，覆盖整体功能、平台支持、构建方式、鸿蒙 NEXT 适配和工作流说明。
 # 更新日志
 
