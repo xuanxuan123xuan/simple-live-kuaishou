@@ -51,7 +51,8 @@ dependencies:
   window_manager: ^0.5.1
   screen_retriever: ^0.2.0
   floating: ^6.0.0
-  flutter_inappwebview: ^6.1.5
+  flutter_inappwebview:
+    path: ../third_party/ohos_media_kit_compat/flutter_inappwebview
   connectivity_plus: 7.0.0
   qr_code_scanner_plus: ^2.0.14
   volume_controller: ^3.4.0

@@ -1,0 +1,11 @@
+name: flutter_inappwebview
+description: OHOS compatibility stub for flutter_inappwebview.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ">=3.0.5 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter

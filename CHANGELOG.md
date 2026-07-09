@@ -1,5 +1,7 @@
 ## 未发布
 
+- 鸿蒙构建使用本地 flutter_inappwebview shim，避开上游插件 Dart 3.5 SDK 约束和原生平台依赖。
+
 - 鸿蒙构建将 shelf 固定到 1.4.1，避开 Flutter OHOS 固定 collection 1.18.0 冲突。
 
 - 降低 simple_live_core SDK 下限到 Dart 3.0.5，兼容 Flutter OHOS Dart 3.4 解析。
