@@ -26,7 +26,7 @@ dependencies:
   udp: ^5.0.3
   uuid: ^4.5.2
   webdav_client: ^1.2.2
-  archive: ^4.0.7
+  archive: 3.6.1
   crypto: ^3.0.7
   flutter_staggered_grid_view: ^0.7.0
   flutter_easyrefresh: 2.2.2
