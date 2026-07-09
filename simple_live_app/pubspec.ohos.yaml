@@ -55,7 +55,7 @@ dependencies:
   connectivity_plus: 7.0.0
   qr_code_scanner_plus: ^2.0.14
   volume_controller: ^3.4.0
-  shelf: ^1.4.2
+  shelf: 1.4.1
   shelf_router: ^1.1.4
   network_info_plus: ^7.0.0
   web_socket_channel: ^3.0.1
