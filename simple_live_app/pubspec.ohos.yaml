@@ -36,19 +36,19 @@ dependencies:
   sticky_headers: ^0.3.0+2
   lottie: ^3.3.2
   canvas_danmaku: ^0.2.7
-  package_info_plus: ^9.0.0
-  device_info_plus: 12.2.0
+  package_info_plus: 8.3.1
+  device_info_plus: 11.4.0
   url_launcher: 6.3.1
-  share_plus: ^12.0.1
+  share_plus: 10.1.4
   path_provider: ^2.1.5
   cross_file: ^0.3.5
-  permission_handler: ^12.0.1
+  permission_handler: 11.4.0
   image_gallery_saver_plus:
     path: ../third_party/ohos_media_kit_compat/image_gallery_saver_plus
   screen_brightness: ^2.1.7
   auto_orientation_v2: ^2.3.6
   wakelock_plus: ^1.4.0
-  file_picker: ^10.3.7
+  file_picker: 8.3.7
   window_manager: ^0.5.1
   screen_retriever: ^0.2.0
   floating: ^6.0.0
