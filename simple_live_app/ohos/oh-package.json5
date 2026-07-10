@@ -1,15 +1,12 @@
 {
-  "name": "simple_live_app_ohos",
-  "version": "1.12.6",
-  "description": "Simple Live OHOS NEXT shell",
-  "main": "",
-  "author": "",
-  "license": "GPL-3.0",
-  "dependencies": {
-    "@ohos/flutter_ohos": "file:./har/flutter.har"
+  modelVersion: "5.1.0",
+  name: "simple_live_app_ohos",
+  version: "1.12.6",
+  description: "Simple Live OHOS NEXT shell",
+  main: "",
+  author: "",
+  license: "GPL-3.0",
+  dependencies: {
+    "@ohos/flutter_ohos": "file:./har/flutter.har",
   },
-  "devDependencies": {
-    "@ohos/hvigor-ohos-plugin": "latest",
-    "@ohos/hvigor": "latest"
-  }
 }

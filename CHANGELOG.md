@@ -8,6 +8,8 @@
 
 - 补齐 OHOS `media_kit` shim 的 `NativePlayer`、`Player.open(play:)` 和 PlatformView 类型导入，修复 Flutter OHOS 3.35 下的 Dart 编译错误。
 
+- OHOS 工程骨架同步 Flutter OHOS 3.35 官方模板的 Hvigor 5.1 配置，移除已由 HarmonyOS CLI 内置、无法从 ohpm 获取的旧 `@ohos/hvigor*` 依赖。
+
 - 鸿蒙 setup action 自动从 `sdk-pkg.json` 探测真实 `HOS_SDK_HOME`，并写入 `flutter config --ohos-sdk`，修复 SDK 解压外层目录导致的 `No Hmos SDK found`。
 
 - 鸿蒙 setup action 自动展开 OpenHarmony Public SDK 的组件 zip，并按 API 目录补齐 `sdk-pkg.json`，让 Flutter OHOS 可识别公开 SDK 镜像。
