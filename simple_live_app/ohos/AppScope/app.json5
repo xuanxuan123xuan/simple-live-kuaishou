@@ -1,0 +1,10 @@
+{
+  app: {
+    bundleName: "com.xycz.simple_live",
+    vendor: "xycz",
+    versionCode: 11206,
+    versionName: "1.12.6",
+    icon: "$media:app_icon",
+    label: "$string:app_name",
+  },
+}
