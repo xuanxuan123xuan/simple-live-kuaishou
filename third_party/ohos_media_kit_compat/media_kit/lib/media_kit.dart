@@ -16,10 +16,11 @@ class PlayerConfiguration {
   final String? title;
   final MPVLogLevel logLevel;
 
-  const PlayerConfiguration({
-    this.title,
-    this.logLevel = MPVLogLevel.error,
-  });
+  const PlayerConfiguration({this.title, this.logLevel = MPVLogLevel.error});
+}
+
+class NativePlayer {
+  Future<void> setProperty(String name, String value) async {}
 }
 
 class Media {
@@ -138,8 +139,8 @@ class PlayerStream {
 
 class Player {
   Player({PlayerConfiguration? configuration})
-      : configuration = configuration ?? const PlayerConfiguration(),
-        platform = _CompatNativePlatform() {
+    : configuration = configuration ?? const PlayerConfiguration(),
+      platform = NativePlayer() {
     _bridge.register(this);
   }
 
@@ -158,7 +159,7 @@ class Player {
     _viewId = viewId;
   }
 
-  Future<void> open(Media media) async {
+  Future<void> open(Media media, {bool play = true}) async {
     _media = media;
     state = state.copyWith(
       playlist: Playlist(medias: [media]),
@@ -166,10 +167,12 @@ class Player {
       buffering: true,
     );
     stream._buffering.add(true);
-    await _invoke('play', <String, dynamic>{
-      'url': media.uri,
-      if (media.httpHeaders != null) 'headers': media.httpHeaders,
-    });
+    if (play) {
+      await _invoke('play', <String, dynamic>{
+        'url': media.uri,
+        if (media.httpHeaders != null) 'headers': media.httpHeaders,
+      });
+    }
   }
 
   Future<void> play() async {
@@ -205,10 +208,8 @@ class Player {
     await _invoke('setVolume', <String, dynamic>{'volume': volume / 100});
   }
 
-  Future<void> seek(Duration position) => _invoke(
-        'seek',
-        <String, dynamic>{'position': position.inMilliseconds},
-      );
+  Future<void> seek(Duration position) =>
+      _invoke('seek', <String, dynamic>{'position': position.inMilliseconds});
 
   Future<Uint8List?> screenshot() async => null;
 
@@ -249,15 +250,12 @@ class Player {
       stream._completed.add(true);
       stream._playing.add(false);
     } else if (stateName == 'error') {
-      final message = event['message']?.toString() ?? 'OHOS native player error';
+      final message =
+          event['message']?.toString() ?? 'OHOS native player error';
       state = state.copyWith(playing: false, buffering: false);
       stream._error.add(message);
     }
   }
-}
-
-class _CompatNativePlatform {
-  Future<void> setProperty(String name, String value) async {}
 }
 
 class _NativeBridge {

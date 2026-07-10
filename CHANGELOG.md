@@ -1,6 +1,12 @@
 ## 未发布
 
-- 鸿蒙 workflow 默认 Flutter OHOS 工具链改用 GitCode `openharmony-sig/flutter_flutter` 的 `3.22.4-ohos-1.1.3`，同时满足 Dart 3 约束和 OHOS 构建命令。
+- 鸿蒙 workflow 改用已验证的 `ErBWs/setup-ohos` 安装 HarmonyOS command-line-tools `5.1.1.823`（API 18），移除必须手工配置 `OHOS_SDK_URL` 的自制 SDK 拼装流程。
+
+- Flutter OHOS 固定到 GitCode `openharmony-sig/flutter_flutter` 的 `3.35.8-ohos-0.0.2`，与项目当前使用的 Flutter 3.35 / Dart 3.8 API 对齐。
+
+- 鸿蒙专用依赖配置同步主工程的纯 Dart 包版本，并将 OHOS `compatibleSdkVersion` 更新到 `5.1.0(18)`；ArkUI 原生播放器和本地兼容 shim 保持不变。
+
+- 补齐 OHOS `media_kit` shim 的 `NativePlayer`、`Player.open(play:)` 和 PlatformView 类型导入，修复 Flutter OHOS 3.35 下的 Dart 编译错误。
 
 - 鸿蒙 setup action 自动从 `sdk-pkg.json` 探测真实 `HOS_SDK_HOME`，并写入 `flutter config --ohos-sdk`，修复 SDK 解压外层目录导致的 `No Hmos SDK found`。
 

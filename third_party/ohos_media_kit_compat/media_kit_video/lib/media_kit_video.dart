@@ -1,14 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 
 const String _viewType = 'simple_live/ohos_native_player';
-
-class NativePlayer {
-  Future<void> setProperty(String name, String value) async {}
-}
 
 class VideoControllerConfiguration {
   final String? vo;

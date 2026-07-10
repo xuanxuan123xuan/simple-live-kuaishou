@@ -1,22 +1,18 @@
 name: Setup Flutter OHOS
-description: Set up Flutter OHOS TPC branch and OpenHarmony/HarmonyOS SDK for HAP builds.
+description: Set up Flutter OHOS and the matching HarmonyOS command-line toolchain.
 inputs:
   flutter-ohos-repo:
     description: Flutter OHOS TPC repository URL.
     required: false
     default: https://gitcode.com/openharmony-sig/flutter_flutter.git
   flutter-ohos-ref:
-    description: Optional Flutter OHOS branch, tag or commit. Default uses a Dart 3 compatible Flutter OHOS release.
+    description: Flutter OHOS branch, tag or commit.
     required: false
-    default: "3.22.4-ohos-1.1.3"
-  ohos-sdk-url:
-    description: URL(s) to OpenHarmony/HarmonyOS command-line SDK archive. Supports zip/tar.gz or whitespace-separated split archives.
+    default: "3.35.8-ohos-0.0.2"
+  ohos-commandline-tools-version:
+    description: HarmonyOS command-line tools build version.
     required: false
-    default: ""
-  ohos-commandline-tools-url:
-    description: URL to OHOS command-line tools archive that provides ohpm.
-    required: false
-    default: "https://repo.huaweicloud.com/harmonyos/ohpm/5.0.2/oh-command-line-tools-20240715.zip"
+    default: "5.1.1.823"
   pub-hosted-url:
     description: Optional PUB_HOSTED_URL mirror.
     required: false
@@ -32,7 +28,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y curl unzip git xz-utils zip libglu1-mesa
+        sudo apt-get install -y curl unzip git xz-utils zip libgl1-mesa-dev
 
     - name: Configure mirrors
       shell: bash
@@ -47,142 +43,21 @@ runs:
           echo "FLUTTER_STORAGE_BASE_URL=$FLUTTER_STORAGE_BASE_URL_INPUT" >> "$GITHUB_ENV"
         fi
 
-    - name: Install OHOS SDK
+    - name: Install HarmonyOS command-line tools
+      id: setup-ohos
+      uses: ErBWs/setup-ohos@4dbb63025116eb6165ceac58a4bf47cbdc5ac721
+      with:
+        version: ${{ inputs.ohos-commandline-tools-version }}
+        cache: true
+
+    - name: Configure HarmonyOS SDK environment
       shell: bash
-      env:
-        OHOS_SDK_URL_INPUT: ${{ inputs.ohos-sdk-url }}
-        OHOS_COMMANDLINE_TOOLS_URL_INPUT: ${{ inputs.ohos-commandline-tools-url }}
       run: |
-        sdk_root="$RUNNER_TEMP/ohos-sdk"
-        if [[ -z "$OHOS_SDK_URL_INPUT" ]]; then
-          echo "OHOS_SDK_URL is required for GitHub hosted runners." >&2
-          echo "Set repository secret or variable OHOS_SDK_URL to DevEco/OpenHarmony SDK archive URL(s)." >&2
-          echo "The hosted runner does not include ohpm/hvigorw/OpenHarmony SDK by default." >&2
-          exit 1
-        fi
-
-        download_dir="$RUNNER_TEMP/ohos-sdk-download"
-        mkdir -p "$sdk_root" "$download_dir"
-        mapfile -t sdk_urls < <(printf '%s\n' "$OHOS_SDK_URL_INPUT" | awk '{ for (i = 1; i <= NF; i++) print $i }')
-        if [[ "${#sdk_urls[@]}" -eq 0 ]]; then
-          echo "OHOS_SDK_URL did not contain any downloadable URL." >&2
-          exit 1
-        fi
-
-        for url in "${sdk_urls[@]}"; do
-          file_name="${url%%\?*}"
-          file_name="${file_name##*/}"
-          if [[ -z "$file_name" || "$file_name" == "$url" ]]; then
-            file_name="ohos-sdk-archive"
-          fi
-          echo "Downloading OHOS SDK part: $file_name"
-          curl -fL --retry 3 "$url" -o "$download_dir/$file_name"
-        done
-
-        archive_path=""
-        if compgen -G "$download_dir/*.zip" >/dev/null; then
-          archive_path="$(find "$download_dir" -maxdepth 1 -type f -name '*.zip' | sort | head -n 1)"
-          unzip -q "$archive_path" -d "$sdk_root"
-        elif compgen -G "$download_dir/*.tar.gz" >/dev/null; then
-          archive_path="$(find "$download_dir" -maxdepth 1 -type f -name '*.tar.gz' | sort | head -n 1)"
-          tar -xzf "$archive_path" -C "$sdk_root"
-        elif compgen -G "$download_dir/*.tar.gz.*" >/dev/null; then
-          archive_path="$RUNNER_TEMP/ohos-sdk.tar.gz"
-          cat $(find "$download_dir" -maxdepth 1 -type f -name '*.tar.gz.*' | sort) > "$archive_path"
-          tar -xzf "$archive_path" -C "$sdk_root"
-        else
-          echo "Unsupported OHOS SDK archive format. Expected .zip, .tar.gz or split .tar.gz.* files." >&2
-          find "$download_dir" -maxdepth 1 -type f -print >&2
-          exit 1
-        fi
-
-        platform_sdk_root="$sdk_root"
-        if [[ -d "$sdk_root/linux" ]]; then
-          platform_sdk_root="$sdk_root/linux"
-        elif [[ -d "$sdk_root/windows" ]]; then
-          platform_sdk_root="$sdk_root/windows"
-        elif [[ -d "$sdk_root/darwin" ]]; then
-          platform_sdk_root="$sdk_root/darwin"
-        fi
-
-        shopt -s nullglob
-        component_zips=("$platform_sdk_root"/*.zip)
-        for component_zip in "${component_zips[@]}"; do
-          echo "Extracting OHOS SDK component: $(basename "$component_zip")"
-          unzip -q -o "$component_zip" -d "$platform_sdk_root"
-          component_name="$(basename "$component_zip")"
-          component_dir="$platform_sdk_root/${component_name%%-*}"
-          package_json="$component_dir/oh-uni-package.json"
-          if [[ -f "$package_json" ]]; then
-            api_version="$(sed -n 's/.*"apiVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$package_json" | head -n 1)"
-            if [[ -n "$api_version" ]]; then
-              mkdir -p "$platform_sdk_root/$api_version"
-              rm -rf "$platform_sdk_root/$api_version/$(basename "$component_dir")"
-              mv "$component_dir" "$platform_sdk_root/$api_version/"
-              if [[ ! -f "$platform_sdk_root/$api_version/sdk-pkg.json" ]]; then
-                printf '{"data":{"apiVersion":"%s"}}\n' "$api_version" > "$platform_sdk_root/$api_version/sdk-pkg.json"
-              fi
-            fi
-          fi
-        done
-        rm -f "${component_zips[@]}" || true
-        shopt -u nullglob
-
-        harmony_sdk_home="$platform_sdk_root"
-        candidate_file="$RUNNER_TEMP/ohos-sdk-candidates.txt"
-        : > "$candidate_file"
-        printf '%s\n' "$platform_sdk_root" "$sdk_root" >> "$candidate_file"
-        while IFS= read -r sdk_pkg_json; do
-          sdk_pkg_dir="$(dirname "$sdk_pkg_json")"
-          printf '%s\n' "$(dirname "$sdk_pkg_dir")" >> "$candidate_file"
-          printf '%s\n' "$sdk_pkg_dir" >> "$candidate_file"
-        done < <(find "$platform_sdk_root" "$sdk_root" -type f -name sdk-pkg.json 2>/dev/null | sort -u)
-        while IFS= read -r candidate; do
-          [[ -d "$candidate" ]] || continue
-          if [[ -d "$candidate/hmscore" && -d "$candidate/openharmony" ]] ||
-             find "$candidate" -mindepth 2 -maxdepth 2 -type f -name sdk-pkg.json -print -quit 2>/dev/null | grep -q .; then
-            harmony_sdk_home="$candidate"
-            break
-          fi
-        done < <(sort -u "$candidate_file")
-
-        echo "OHOS_SDK_HOME=$harmony_sdk_home" >> "$GITHUB_ENV"
-        echo "HOS_SDK_HOME=$harmony_sdk_home" >> "$GITHUB_ENV"
-        echo "DEVECO_SDK_HOME=$harmony_sdk_home" >> "$GITHUB_ENV"
-
-        while IFS= read -r dir; do
-          echo "$dir" >> "$GITHUB_PATH"
-          export PATH="$dir:$PATH"
-        done < <(find "$harmony_sdk_home" -type d \( -name bin -o -name toolchains \) | sort)
-
-        echo "SDK root: $sdk_root"
-        echo "Platform SDK root: $platform_sdk_root"
-        echo "Detected Harmony SDK home: $harmony_sdk_home"
-        echo "Detected SDK package files:"
-        find "$platform_sdk_root" "$sdk_root" -type f \( -name sdk-pkg.json -o -name oh-uni-package.json \) | sort -u | head -n 60 || true
-        echo "Detected OHOS command paths:"
-        find "$harmony_sdk_home" -type f \( -name ohpm -o -name ohpm.bat -o -name hvigorw -o -name hvigorw.bat -o -name hvigor -o -name hvigor.bat \) | sort || true
-        if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi
-        if command -v hvigorw >/dev/null 2>&1; then hvigorw --version || true; fi
-        if command -v hvigor >/dev/null 2>&1; then hvigor --version || true; fi
-
-        if [[ -n "$OHOS_COMMANDLINE_TOOLS_URL_INPUT" ]]; then
-          tools_root="$RUNNER_TEMP/ohos-command-line-tools"
-          mkdir -p "$tools_root"
-          curl -fL --retry 3 "$OHOS_COMMANDLINE_TOOLS_URL_INPUT" -o "$RUNNER_TEMP/ohos-command-line-tools.zip"
-          unzip -q "$RUNNER_TEMP/ohos-command-line-tools.zip" -d "$tools_root"
-          while IFS= read -r dir; do
-            echo "$dir" >> "$GITHUB_PATH"
-            export PATH="$dir:$PATH"
-          done < <(find "$tools_root" -type d -name bin | sort)
-
-          echo "Detected OHOS command-line tool paths:"
-          find "$tools_root" -type f \( -name ohpm -o -name ohpm.bat -o -name hvigorw -o -name hvigorw.bat -o -name hvigor -o -name hvigor.bat \) | sort || true
-          find "$tools_root" -type f \( -name ohpm -o -name hvigorw -o -name hvigor \) -exec chmod +x {} \; || true
-          if command -v ohpm >/dev/null 2>&1; then ohpm --version || true; fi
-          if command -v hvigorw >/dev/null 2>&1; then hvigorw --version || true; fi
-          if command -v hvigor >/dev/null 2>&1; then hvigor --version || true; fi
-        fi
+        echo "OHOS_SDK_HOME=$HOS_SDK_HOME" >> "$GITHUB_ENV"
+        echo "DEVECO_SDK_HOME=$HOS_SDK_HOME" >> "$GITHUB_ENV"
+        echo "HarmonyOS SDK: ${{ steps.setup-ohos.outputs.sdk-version }}"
+        echo "HarmonyOS API: ${{ steps.setup-ohos.outputs.api-version }}"
+        ohpm --version
 
     - name: Install Flutter OHOS
       shell: bash
@@ -196,10 +71,8 @@ runs:
         git config --global http.lowSpeedTime 60
         for attempt in 1 2 3; do
           rm -rf "$flutter_root"
-          if [[ -n "$FLUTTER_OHOS_REF" ]]; then
-            git clone --depth 1 --single-branch --branch "$FLUTTER_OHOS_REF" "$FLUTTER_OHOS_REPO" "$flutter_root" && break
-          else
-            git clone --depth 1 --single-branch "$FLUTTER_OHOS_REPO" "$flutter_root" && break
+          if git clone --depth 1 --single-branch --branch "$FLUTTER_OHOS_REF" "$FLUTTER_OHOS_REPO" "$flutter_root"; then
+            break
           fi
           if [[ "$attempt" == "3" ]]; then
             echo "Failed to clone Flutter OHOS after $attempt attempts." >&2
@@ -208,9 +81,6 @@ runs:
           echo "Flutter OHOS clone failed; retrying in $((attempt * 10)) seconds..." >&2
           sleep $((attempt * 10))
         done
-        if [[ "$FLUTTER_OHOS_REF" == 3.22.* ]]; then
-          git -C "$flutter_root" tag -f 3.22.0 HEAD || true
-        fi
         echo "$flutter_root/bin" >> "$GITHUB_PATH"
         echo "FLUTTER_ROOT=$flutter_root" >> "$GITHUB_ENV"
 
@@ -221,20 +91,14 @@ runs:
         config_help="$(flutter config --help 2>&1 || true)"
         if grep -q -- "--enable-ohos" <<< "$config_help"; then
           flutter config --enable-ohos || true
-        else
-          echo "Current Flutter SDK does not expose 'flutter config --enable-ohos'; skipping."
         fi
         if grep -q -- "--ohos-sdk" <<< "$config_help"; then
           flutter config --ohos-sdk "$HOS_SDK_HOME" || true
-        else
-          echo "Current Flutter SDK does not expose 'flutter config --ohos-sdk'; relying on HOS_SDK_HOME."
         fi
         precache_help="$(flutter precache --help 2>&1 || true)"
         if grep -q -- "--ohos" <<< "$precache_help"; then
           flutter precache --ohos
         else
-          echo "Current Flutter SDK does not expose 'flutter precache --ohos'; using default precache."
           flutter precache
         fi
-        find "$FLUTTER_ROOT/bin/cache/artifacts" -type f -name flutter.har -print || true
         flutter doctor -v || true

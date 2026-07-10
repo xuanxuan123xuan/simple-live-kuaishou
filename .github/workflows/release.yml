@@ -19,9 +19,13 @@ on:
         required: false
         default: "https://gitcode.com/openharmony-sig/flutter_flutter.git"
       flutter_ohos_ref:
-        description: "Flutter OHOS branch/tag/commit. Defaults to a Dart 3 compatible OHOS release."
+        description: "Flutter OHOS branch/tag/commit."
         required: false
-        default: "3.22.4-ohos-1.1.3"
+        default: "3.35.8-ohos-0.0.2"
+      ohos_commandline_tools_version:
+        description: "HarmonyOS command-line tools build version"
+        required: false
+        default: "5.1.1.823"
 
 permissions:
   contents: write
@@ -383,8 +387,8 @@ jobs:
       - uses: ./.github/actions/setup-flutter-ohos
         with:
           flutter-ohos-repo: ${{ inputs.flutter_ohos_repo || vars.FLUTTER_OHOS_REPO || 'https://gitcode.com/openharmony-sig/flutter_flutter.git' }}
-          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref || vars.FLUTTER_OHOS_REF || '3.22.4-ohos-1.1.3' }}
-          ohos-sdk-url: ${{ secrets.OHOS_SDK_URL || vars.OHOS_SDK_URL }}
+          flutter-ohos-ref: ${{ inputs.flutter_ohos_ref || vars.FLUTTER_OHOS_REF || '3.35.8-ohos-0.0.2' }}
+          ohos-commandline-tools-version: ${{ inputs.ohos_commandline_tools_version || vars.OHOS_COMMANDLINE_TOOLS_VERSION || '5.1.1.823' }}
           pub-hosted-url: ${{ vars.PUB_HOSTED_URL }}
           flutter-storage-base-url: ${{ vars.FLUTTER_STORAGE_BASE_URL }}
 
@@ -455,7 +459,7 @@ jobs:
               node ./oh_modules/@ohos/hvigor/index.js assembleHap --mode module -p module=entry@default -p product=default
             else
               echo "Neither flutter build hap nor an installed hvigor entrypoint is available." >&2
-              echo "Check OHOS_SDK_URL and the OHOS command-line tools download." >&2
+              echo "Check the HarmonyOS command-line tools setup step." >&2
               exit 127
             fi
           fi

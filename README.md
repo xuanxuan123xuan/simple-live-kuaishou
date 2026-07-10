@@ -73,33 +73,20 @@ Simple Live 是一个跨平台聚合直播客户端，目标是用统一体验�
 | `simple_live_app/ohos` | DevEco Studio / OHOS 工程骨架 |
 | `simple_live_app/pubspec.ohos.yaml` | 鸿蒙专用依赖配置 |
 | `third_party/ohos_media_kit_compat` | 鸿蒙专用 `media_kit` 兼容 shim |
-| `.github/actions/setup-flutter-ohos` | GitHub Actions 中初始化 Flutter OHOS / OHOS SDK |
+| `.github/actions/setup-flutter-ohos` | GitHub Actions 中初始化 Flutter OHOS / HarmonyOS CLI |
 | `.github/workflows/publish_app_release_ohos.yml` | 手动构建 `.hap` 的 workflow |
 
-GitHub 官方 runner 不内置 DevEco / OHOS SDK。若要在 GitHub Actions 构建 `.hap`，必须在仓库 `Settings → Secrets and variables → Actions` 中配置：
+GitHub 官方 runner 不内置 DevEco / HarmonyOS SDK。workflow 使用固定 commit 的 [`ErBWs/setup-ohos`](https://github.com/ErBWs/setup-ohos) 安装 HarmonyOS command-line-tools `5.1.1.823`（API 18），不再要求仓库配置 `OHOS_SDK_URL`。该版本与 Flutter OHOS 3.35 官方文档要求的 DevEco / command-line-tools 5.1、API 18 对齐。
+
+默认工具链如下：
 
 ```text
-OHOS_SDK_URL = 可直接下载的 OpenHarmony/HarmonyOS command-line SDK archive 链接
+FLUTTER_OHOS_REPO                 = https://gitcode.com/openharmony-sig/flutter_flutter.git
+FLUTTER_OHOS_REF                  = 3.35.8-ohos-0.0.2
+OHOS_COMMANDLINE_TOOLS_VERSION    = 5.1.1.823
 ```
 
-`OHOS_SDK_URL` 支持单个 `.zip` / `.tar.gz` 链接，也支持空格或换行分隔的分卷 `.tar.gz.aa`、`.tar.gz.ab` 链接。当前项目默认以 `compatibleSdkVersion: 5.0.0(12)` 构建，可使用 OpenHarmony 5.0.0 Linux SDK 分卷：
-
-```text
-https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.aa https://github.com/openharmony-rs/ohos-sdk/releases/download/v5.0.0/ohos-sdk-windows_linux-public.tar.gz.ab
-```
-
-workflow 会额外下载公开的 `oh-command-line-tools-20240715.zip` 以提供 `ohpm`，并会展开 OpenHarmony Public SDK 里的组件 zip、补齐 Flutter OHOS 识别所需的 `sdk-pkg.json`、自动探测真实 `HOS_SDK_HOME`，再由 `ohpm install` 安装 OHOS 工程里的 hvigor 依赖。
-
-Flutter OHOS TPC 工具链默认使用 GitCode 源：
-
-```text
-FLUTTER_OHOS_REPO = https://gitcode.com/openharmony-sig/flutter_flutter.git
-FLUTTER_OHOS_REF  = 3.22.4-ohos-1.1.3
-```
-
-该分支同时具备 Dart 3 兼容性和 OHOS `flutter build hap` / `flutter build har` 支持；如果使用旧 Gitee `master` / `dev`，容易退回 Dart 2.19，导致项目 Dart SDK 约束解析失败。
-
-未配置时 workflow 会在初始化阶段直接失败并提示配置 `OHOS_SDK_URL`。这是刻意设计：避免 GitHub runner 缺少真实 `ohpm` / `hvigorw` / OpenHarmony SDK 时继续执行，产生误导性的构建错误。
+`3.35.8-ohos-0.0.2` 提供 Dart 3.8+ 和当前项目使用的 Flutter 3.35 API；鸿蒙专用 `pubspec.ohos.yaml` 保留 ArkUI 播放器兼容层，并将纯 Dart 依赖与主工程同步。若需测试其他官方工具链，可在手动 workflow 输入中覆盖 Flutter ref 和 command-line-tools 版本。
 
 更多细节见：`simple_live_app/OHOS_NATIVE_PLAYER_MIGRATION.md`。
 
@@ -187,7 +174,7 @@ flutter build macos --release
 
 ### OpenHarmony / HarmonyOS NEXT
 
-本地鸿蒙构建需要 GitCode Flutter OHOS TPC `3.22.4-ohos-1.1.3`、DevEco / OHOS SDK，并确保 `ohpm` / `hvigorw` / SDK toolchains 已加入环境变量。构建前临时使用鸿蒙依赖配置：
+本地鸿蒙构建需要 GitCode Flutter OHOS TPC `3.35.8-ohos-0.0.2`、DevEco Studio / command-line-tools 5.1、HarmonyOS API 18，并确保 `HOS_SDK_HOME`、`ohpm` 和 Flutter OHOS 已配置。构建前临时使用鸿蒙依赖配置：
 
 ```bash
 cd simple_live_app

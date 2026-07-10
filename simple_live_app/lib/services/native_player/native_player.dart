@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 const String kOhosNativePlayerViewType = 'simple_live/ohos_native_player';
@@ -46,7 +47,8 @@ class NativePlayerProgress {
     return NativePlayerProgress(
       position: Duration(milliseconds: (map['position'] as num?)?.toInt() ?? 0),
       duration: Duration(milliseconds: (map['duration'] as num?)?.toInt() ?? 0),
-      buffered: ((map['buffered'] as num?)?.toDouble() ?? 0).clamp(0, 1).toDouble(),
+      buffered:
+          ((map['buffered'] as num?)?.toDouble() ?? 0).clamp(0, 1).toDouble(),
     );
   }
 }
@@ -71,7 +73,9 @@ class NativePlayerEvent {
     return NativePlayerEvent(
       state: state,
       progress: NativePlayerProgress.fromMap(
-        map['progress'] is Map ? map['progress'] as Map<dynamic, dynamic> : null,
+        map['progress'] is Map
+            ? map['progress'] as Map<dynamic, dynamic>
+            : null,
       ),
       message: map['message']?.toString(),
     );
@@ -118,7 +122,8 @@ class OhosNativePlayerController implements SimpleLivePlayerController {
   ValueListenable<NativePlayerProgress> get progress => _progress;
 
   @override
-  ValueListenable<NativePlayerPlaybackState> get playbackState => _playbackState;
+  ValueListenable<NativePlayerPlaybackState> get playbackState =>
+      _playbackState;
 
   Widget buildView({BoxFit fit = BoxFit.contain}) {
     return OhosNativePlayerView(controller: this, fit: fit);
