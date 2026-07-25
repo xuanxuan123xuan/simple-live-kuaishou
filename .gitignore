@@ -1,0 +1,34 @@
+# Editor settings
+simple_live_app/.vscode/settings.json
+simple_live_tv_app/.vscode/settings.json
+
+# Local workspace metadata
+.codex/
+
+# Local release and build artifacts
+release/
+models/
+docs/
+issue_logs/
+experience/
+graphify-out/
+**/android/app/build/
+tools/
+
+# Local scripts
+build_android_apk.bat
+build_tv_apk.bat
+deploy_windows.bat
+
+# Local temp workspace files
+fix-guide.md
+tmp_*.png
+tmp_*.xml
+
+# macOS metadata
+*.DS_Store
+
+# Markdown docs
+*.md
+!README.md
+!**/README.md
