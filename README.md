@@ -1,8 +1,17 @@
-> ### Release
+﻿> [!IMPORTANT]
 >
-> 本仓库提供阶段性 `Release` 安装包与压缩包，见 [GitHub Releases](https://github.com/June6699/dart_simple_live/releases) 页面。
+> **本仓库已停止维护。**
 >
-> 私有开发主仓会更频繁更新；公开仓库只在阶段性整理后同步。
+> 请移步至新仓库获取最新版本与更新：
+> 👉 **[xuanxuan123xuan/dart_simple_live](https://github.com/xuanxuan123xuan/dart_simple_live)**
+>
+> 新仓库基于 `feat/ohos-1.12.7` 分支持续维护，支持：
+> - 鸿蒙 NEXT 适配（ArkTS 原生插件、服务卡片）
+> - iPad / 平板多开同屏
+> - iOS / macOS / Android / Windows / Linux 全平台
+> - 斗鱼、虎牙、哔哩哔哩、抖音、快手五大直播平台
+
+
 
 <p align="center">
     <img width="128" src="/assets/logo.png" alt="Simple Live logo">
@@ -20,7 +29,7 @@
 ## 仓库说明
 
 - fork 来源：[原作者仓库 xiaoyaocz/dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live)
-- 当前公开仓库：`June6699/dart_simple_live`
+- 当前维护仓库：[xuanxuan123xuan/dart_simple_live](https://github.com/xuanxuan123xuan/dart_simple_live)
 
 ## 支持项目
 
